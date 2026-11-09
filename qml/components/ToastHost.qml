@@ -26,9 +26,10 @@ Item {
     ListModel { id: toastModel }
 
     Column {
-        anchors.horizontalCenter: parent.horizontalCenter
-        anchors.bottom: parent.bottom
-        anchors.bottomMargin: 26
+        anchors.right: parent.right
+        anchors.rightMargin: 14
+        anchors.top: parent.top
+        anchors.topMargin: 80
         spacing: 4
         z: 2
 

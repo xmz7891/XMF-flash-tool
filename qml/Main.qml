@@ -1,562 +1,641 @@
 import QtQuick
+import QtQuick.Controls
 import QtQuick.Controls.Basic
 import XMF
 
+// Instrument-style single-window shell:
+// caption bar -> command menu bar -> icon rail + flashing console stack -> status bar.
 Window {
     id: win
-    width: 1400
-    height: 900
-    minimumWidth: 1120
-    minimumHeight: 720
+    width: 1180
+    height: 760
+    minimumWidth: 1040
+    minimumHeight: 680
     visible: true
     color: Theme.windowBg
     title: "XMF Flash Tool"
     flags: Qt.Window | Qt.FramelessWindowHint
 
     readonly property bool maximized: visibility === Window.Maximized
-    property int navIndex: 0
     property bool forceClose: false
+    property int navIndex: 0
+    property string currentPage: "console"
+
+    Component.onCompleted: {
+        const w = Number(App.settings.get("ui/windowWidth", 1180))
+        const h = Number(App.settings.get("ui/windowHeight", 760))
+        width = Math.max(minimumWidth, w)
+        height = Math.max(minimumHeight, h)
+        const x = Number(App.settings.get("ui/windowX", -1))
+        const y = Number(App.settings.get("ui/windowY", -1))
+        if (x >= 0 && y >= 0) {
+            win.x = Math.max(0, Math.min(x, Math.max(0, screen.width - width)))
+            win.y = Math.max(0, Math.min(y, Math.max(0, screen.height - height)))
+        } else {
+            win.x = Math.max(0, (screen.width - width) / 2)
+            win.y = Math.max(0, (screen.height - height) / 2)
+        }
+    }
 
     onClosing: function(close) {
+        if (!maximized) {
+            App.settings.set("ui/windowWidth", width)
+            App.settings.set("ui/windowHeight", height)
+            App.settings.set("ui/windowX", x)
+            App.settings.set("ui/windowY", y)
+        }
         if (!forceClose && App.activeTasks.length > 0) {
             close.accepted = false
             exitConfirm.visible = true
         }
     }
 
-    readonly property var navModel: [
-        { key: "home",     label: "概览",        icon: "home" },
-        { key: "flash",    label: "刷机中心",    icon: "zap" },
-        { key: "image",    label: "工具库",      icon: "disc-3" },
-        { key: "modes",    label: "内置模式",    icon: "layout-dashboard" },
-        { key: "packets",  label: "深度刷机引导",  icon: "package" },
-        { key: "firmware", label: "固件资源",    icon: "download-cloud" },
-        { key: "batch",    label: "批量任务",    icon: "list-checks" },
-        { key: "logs",     label: "日志",        icon: "file-text" },
-        { key: "official", label: "官方工具",    icon: "box" },
-        { key: "settings", label: "设置",        icon: "settings" },
-        { key: "console",  label: "控制台",      icon: "terminal" }
-    ]
+    // ------------------------------------------------------------ navigation
+    function pushPage(comp, props, key) {
+        if (comp === null)
+            return
+        win.currentPage = key
+        stack.push(comp, props || ({}))
+    }
 
-    function pageComponent(index) {
-        switch (index) {
-        case 0: return homeComp
-        case 1: return flashComp
-        case 2: return imageComp
-        case 3: return modesComp
-        case 4: return packetsComp
-        case 5: return firmwareComp
-        case 6: return batchComp
-        case 7: return logsComp
-        case 8: return officialComp
-        case 9: return settingsComp
-        case 10: return consoleComp
+    function openPageByKey(key) {
+        switch (key) {
+        case "tools": pushPage(toolsComp, {}, key); break
+        case "modes": pushPage(modesComp, {}, key); break
+        case "packets": pushPage(packetsComp, {}, key); break
+        case "firmware": pushPage(firmwareComp, {}, key); break
+        case "batch": pushPage(batchComp, {}, key); break
+        case "logs": pushPage(logsComp, {}, key); break
+        case "official": pushPage(officialComp, {}, key); break
+        case "settings": pushPage(settingsComp, {}, key); break
+        case "console": pushPage(consolePageComp, {}, key); break
         }
-        return homeComp
     }
 
     function navigate(index) {
-        if (index === navIndex)
-            return
         navIndex = index
-        stack.replace(pageComponent(index))
+        if (index <= 1) {
+            popToConsole()
+            if (index === 1)
+                Qt.callLater(console.readPartitions)
+            return
+        }
+        const keys = ["console", "console", "tools", "modes", "packets", "firmware",
+                      "batch", "logs", "official", "settings", "console"]
+        if (index < keys.length)
+            openPageByKey(keys[index])
     }
 
-    function openEmbeddedTool(toolId) {
-        stack.push(embeddedComp, { "toolId": toolId })
+    function popToConsole() {
+        while (stack.depth > 1)
+            stack.pop()
+        win.currentPage = "console"
     }
 
-    // Test hook: navigate to the flash center and read the connected device's
-    // partitions with the same code path the button uses.
-    function autoReadDevicePartitions() {
-        navigate(1)
-        Qt.callLater(function() {
-            const page = stack.currentItem
-            if (page && page.loadDevicePartitions)
-                page.loadDevicePartitions()
-        })
+    function openModePage(modeId) {
+        switch (modeId) {
+        case "miflash": pushPage(miflashComp, {}, "miflash"); break
+        case "spflash": pushPage(spflashComp, {}, "spflash"); break
+        case "spdflash": pushPage(spdflashComp, {}, "spdflash"); break
+        case "rkdevtool": pushPage(rkdevtoolComp, {}, "rkdevtool"); break
+        case "phoenixsuit": pushPage(phoenixsuitComp, {}, "phoenixsuit"); break
+        case "fastboot": pushPage(fastbootModeComp, { "platform": "qcom" }, "fastboot"); break
+        case "recovery": pushPage(recoveryModeComp, { "platform": "qcom" }, "recovery"); break
+        case "qcom-edl": pushPage(qcomEdlComp, {}, "qcom-edl"); break
+        }
     }
 
-    // Flash center: Fastboot / Recovery / 9008(EDL) are separate workbenches.
     function openFlashMode(modeId) {
         const id = String(modeId)
         if (id.indexOf("fastboot:") === 0) {
-            stack.push(fastbootModeComp, { "platform": id.substring("fastboot:".length) })
+            pushPage(fastbootModeComp, { "platform": id.substring("fastboot:".length) }, "fastboot")
             return
         }
         if (id.indexOf("recovery:") === 0) {
-            stack.push(recoveryModeComp, { "platform": id.substring("recovery:".length) })
+            pushPage(recoveryModeComp, { "platform": id.substring("recovery:".length) }, "recovery")
             return
         }
         openModePage(id)
     }
 
-    function openModePage(modeId) {
-        switch (modeId) {
-        case "miflash": stack.push(miflashComp); break
-        case "spflash": stack.push(spflashComp); break
-        case "spdflash": stack.push(spdflashComp); break
-        case "rkdevtool": stack.push(rkdevtoolComp); break
-        case "phoenixsuit": stack.push(phoenixsuitComp); break
-        case "fastboot": stack.push(fastbootModeComp, { "platform": "qcom" }); break
-        case "recovery": stack.push(recoveryModeComp, { "platform": "qcom" }); break
-        case "qcom-edl": stack.push(qcomEdlComp); break
+    function openEmbeddedTool(toolId) {
+        pushPage(embeddedComp, { "toolId": toolId }, "embedded")
+    }
+
+    function autoReadDevicePartitions() {
+        popToConsole()
+        Qt.callLater(console.readPartitions)
+    }
+
+    function pageLabel(key) {
+        switch (key) {
+        case "tools": return "工具库"
+        case "modes": return "内置模式"
+        case "packets": return "深度刷机引导"
+        case "firmware": return "固件资源"
+        case "batch": return "批量任务"
+        case "logs": return "日志"
+        case "official": return "官方工具"
+        case "settings": return "设置"
+        case "console": return "命令控制台"
+        case "miflash": return "MiFlash 工作台"
+        case "spflash": return "SP Flash 工作台"
+        case "spdflash": return "SPD Flash 工作台"
+        case "rkdevtool": return "RKDevTool 工作台"
+        case "phoenixsuit": return "PhoenixSuit 工作台"
+        case "fastboot": return "Fastboot 工作台"
+        case "recovery": return "Recovery 工作台"
+        case "qcom-edl": return "Qualcomm 9008 工作台"
+        case "embedded": return "官方工具"
         }
+        return key
     }
 
     function toggleMaximize() {
-        if (maximized)
-            win.showNormal()
+        if (visibility === Window.Maximized)
+            showNormal()
         else
-            win.showMaximized()
+            showMaximized()
     }
 
-    // ------------------------------------------------------------------ shell
+    // -------------------------------------------------------------- shell
     Rectangle {
         id: shell
         anchors.fill: parent
-        radius: win.maximized ? 0 : 6
+        radius: maximized ? 0 : 6
         color: Theme.windowBg
         border.width: 1
         border.color: Theme.windowBorder
         clip: true
 
-        // -------------------------------------------------------- title bar
-        Item {
-            id: titleBar
-            anchors.top: parent.top
-            anchors.left: parent.left
-            anchors.right: parent.right
-            height: 32
+        Column {
+            anchors.fill: parent
 
-            MouseArea {
-                anchors.fill: parent
-                acceptedButtons: Qt.LeftButton
-                onPressed: win.startSystemMove()
-                onDoubleClicked: win.toggleMaximize()
-            }
+            Item {
+                id: titleBar
+                width: parent.width
+                height: 34
 
-            Row {
-                anchors.left: parent.left
-                anchors.leftMargin: 8
-                anchors.verticalCenter: parent.verticalCenter
-                spacing: 6
+                MouseArea {
+                    anchors.fill: parent
+                    acceptedButtons: Qt.LeftButton
+                    onPressed: win.startSystemMove()
+                    onDoubleClicked: win.toggleMaximize()
+                }
 
-                Rectangle {
-                    width: 18; height: 18
-                    radius: 4
-                    clip: true
-                    color: "transparent"
-                    Image {
-                        anchors.fill: parent
-                        source: "qrc:/images/xmf_icon.png"
-                        fillMode: Image.PreserveAspectCrop
-                        smooth: true
+                Row {
+                    anchors.left: parent.left
+                    anchors.leftMargin: 10
+                    anchors.verticalCenter: parent.verticalCenter
+                    spacing: 8
+
+                    Rectangle {
+                        width: 20; height: 20
+                        radius: 4
+                        clip: true
+                        color: "transparent"
+                        Image {
+                            anchors.fill: parent
+                            source: "qrc:/images/xmf_icon.png"
+                            fillMode: Image.PreserveAspectCrop
+                            smooth: true
+                        }
                     }
-                }
-                Text {
-                    text: "XMF Flash Tool"
-                    color: Theme.text
-                    font.pixelSize: 12
-                    font.weight: Font.DemiBold
-                    anchors.verticalCenter: parent.verticalCenter
-                }
-                Text {
-                    text: "v" + App.version
-                    color: Theme.textMuted
-                    font.pixelSize: 10
-                    anchors.verticalCenter: parent.verticalCenter
-                }
-                Rectangle {
-                    visible: App.admin
-                    width: 44; height: 15
-                    radius: 2
-                    color: Theme.alpha(Theme.warning, 0.16)
                     Text {
-                        anchors.centerIn: parent
-                        text: "管理员"
-                        color: Theme.warning
-                        font.pixelSize: 9
+                        text: "XMF Flash Tool"
+                        color: Theme.text
+                        font.pixelSize: 12
+                        font.weight: Font.DemiBold
+                        anchors.verticalCenter: parent.verticalCenter
                     }
+                    Text {
+                        text: "v" + App.version
+                        color: Theme.textMuted
+                        font.pixelSize: 10
+                        anchors.verticalCenter: parent.verticalCenter
+                    }
+                    Rectangle {
+                        visible: App.admin
+                        width: 44; height: 15
+                        radius: 2
+                        color: Theme.alpha(Theme.warning, 0.16)
+                        Text {
+                            anchors.centerIn: parent
+                            text: "管理员"
+                            color: Theme.warning
+                            font.pixelSize: 9
+                        }
+                        anchors.verticalCenter: parent.verticalCenter
+                    }
+                }
+
+                Row {
+                    anchors.right: parent.right
                     anchors.verticalCenter: parent.verticalCenter
+                    spacing: 0
+
+                    WindowButton { kind: 0; implicitHeight: 30; implicitWidth: 42; onClicked: win.showMinimized() }
+                    WindowButton { kind: 1; implicitHeight: 30; implicitWidth: 42; onClicked: win.toggleMaximize() }
+                    WindowButton { kind: 2; implicitHeight: 30; implicitWidth: 42; onClicked: win.close() }
+                }
+            }
+
+            Item {
+                id: menuBar
+                width: parent.width
+                height: 38
+
+                Rectangle {
+                    anchors.bottom: parent.bottom
+                    width: parent.width
+                    height: 1
+                    color: Theme.divider
+                }
+
+                Row {
+                    anchors.left: parent.left
+                    anchors.leftMargin: 6
+                    anchors.verticalCenter: parent.verticalCenter
+                    spacing: 2
+
+                    AppButton { text: "功能 ▾"; kind: 2; small: true; onClicked: funcMenu.popup() }
+                    AppButton { text: "通用功能 ▾"; kind: 2; small: true; onClicked: commonMenu.popup() }
+                    AppButton { text: "高级功能 ▾"; kind: 2; small: true; onClicked: advancedMenu.popup() }
+                    AppButton { text: "其他功能 ▾"; kind: 2; small: true; onClicked: otherMenu.popup() }
+                    AppButton { text: "辅助功能 ▾"; kind: 2; small: true; onClicked: helpMenu.popup() }
+                }
+
+                Menu {
+                    id: funcMenu
+                    MenuItem { text: "刷机台"; onTriggered: win.popToConsole() }
+                    MenuSeparator { }
+                    MenuItem { text: "工具库"; onTriggered: win.openPageByKey("tools") }
+                    MenuItem { text: "内置模式"; onTriggered: win.openPageByKey("modes") }
+                    MenuItem { text: "深度刷机引导"; onTriggered: win.openPageByKey("packets") }
+                    MenuItem { text: "固件资源"; onTriggered: win.openPageByKey("firmware") }
+                    MenuItem { text: "批量任务"; onTriggered: win.openPageByKey("batch") }
+                    MenuItem { text: "日志"; onTriggered: win.openPageByKey("logs") }
+                    MenuItem { text: "官方工具"; onTriggered: win.openPageByKey("official") }
+                    MenuItem { text: "命令控制台"; onTriggered: win.openPageByKey("console") }
+                    MenuItem { text: "设置"; onTriggered: win.openPageByKey("settings") }
+                }
+                Menu {
+                    id: commonMenu
+                    MenuItem { text: "读取分区表"; onTriggered: { win.popToConsole(); Qt.callLater(console.readPartitions) } }
+                    MenuItem { text: "读取设备信息"; onTriggered: { win.popToConsole(); console.openTool("adb.info") } }
+                    MenuItem { text: "Fastboot 电池状态"; onTriggered: { win.popToConsole(); console.openTool("fastboot.battery") } }
+                    MenuSeparator { }
+                    MenuItem { text: "刷写前检查"; onTriggered: { win.popToConsole(); console.openTool("fastboot.flash.check") } }
+                    MenuItem { text: "导出分区表 CSV"; onTriggered: { win.popToConsole(); console.openTool("fastboot.partitions.export") } }
+                    MenuItem { text: "环境自检"; onTriggered: App.runTool("system.selfTest", ({})) }
+                }
+                Menu {
+                    id: advancedMenu
+                    MenuItem { text: "Fastboot 工作台"; onTriggered: win.openFlashMode("fastboot:qcom") }
+                    MenuItem { text: "Recovery 卡刷"; onTriggered: win.openFlashMode("recovery:qcom") }
+                    MenuItem { text: "Qualcomm 9008 (EDL)"; onTriggered: win.openFlashMode("qcom-edl") }
+                    MenuSeparator { }
+                    MenuItem { text: "MTK BROM / DA（SP Flash）"; onTriggered: win.openModePage("spflash") }
+                    MenuItem { text: "Unisoc U2S / FDL"; onTriggered: win.openModePage("spdflash") }
+                    MenuItem { text: "Rockchip MaskROM / Loader"; onTriggered: win.openModePage("rkdevtool") }
+                    MenuItem { text: "Allwinner FEL"; onTriggered: win.openModePage("phoenixsuit") }
+                }
+                Menu {
+                    id: otherMenu
+                    MenuItem { text: "ADB 命令控制台"; onTriggered: win.openPageByKey("console") }
+                    MenuItem { text: "多设备并行命令"; onTriggered: { win.popToConsole(); console.openTool("adb.multiShell") } }
+                    MenuItem { text: "Root 痕迹检测"; onTriggered: { win.popToConsole(); console.openTool("root.hide") } }
+                    MenuItem { text: "APatch 内核检查"; onTriggered: { win.popToConsole(); console.openTool("root.apatch.patch") } }
+                    MenuItem { text: "小米固件检索"; onTriggered: { win.popToConsole(); console.openTool("firmware.xiaomi.search") } }
+                }
+                Menu {
+                    id: helpMenu
+                    MenuItem { text: "打开数据目录"; onTriggered: App.openPath(App.dataPath) }
+                    MenuItem { text: "日志目录"; onTriggered: App.openPath(App.dataPath) }
+                    MenuItem { text: "使用指南"; onTriggered: App.openDocs("USER_GUIDE.md") }
+                    MenuItem { text: "检查更新"; onTriggered: App.openUrl("https://github.com/xmz7891/XMF-flash-tool/releases/latest") }
+                    MenuItem { text: "扫描引导包"; onTriggered: App.packets.refresh() }
+                }
+
+                Row {
+                    anchors.right: parent.right
+                    anchors.rightMargin: 8
+                    anchors.verticalCenter: parent.verticalCenter
+                    spacing: 8
+
+                    Text {
+                        text: "端口 " + App.flashPorts.length
+                        color: Theme.textMuted
+                        font.pixelSize: 10
+                        anchors.verticalCenter: parent.verticalCenter
+                    }
+                    AppButton {
+                        text: "刷新"
+                        icon: "refresh-cw"
+                        kind: 1
+                        small: true
+                        onClicked: { App.scanPorts(); App.refreshDevices() }
+                    }
+                    Rectangle { width: 1; height: 18; color: Theme.divider }
+                    Text {
+                        text: App.deviceMode.label || "未检测到设备"
+                        color: App.deviceMode.mode === "none" ? Theme.textMuted : Theme.text
+                        font.pixelSize: 11
+                        font.weight: Font.DemiBold
+                        anchors.verticalCenter: parent.verticalCenter
+                    }
+                    Rectangle { width: 1; height: 18; color: Theme.divider }
+                    Text {
+                        text: "存储 自动"
+                        color: Theme.textMuted
+                        font.pixelSize: 10
+                        anchors.verticalCenter: parent.verticalCenter
+                    }
                 }
             }
 
             Row {
-                anchors.right: parent.right
-                anchors.rightMargin: 0
-                anchors.top: parent.top
-                spacing: 0
+                width: parent.width
+                height: parent.height - 34 - 38 - 26
+
+                Rectangle {
+                    width: 54
+                    height: parent.height
+                    color: Theme.sectionBg
+
+                    Column {
+                        anchors.top: parent.top
+                        anchors.topMargin: 6
+                        anchors.horizontalCenter: parent.horizontalCenter
+                        spacing: 2
+
+                        readonly property var items: [
+                            { key: "console", icon: "zap", label: "刷机台" },
+                            { key: "tools", icon: "disc-3", label: "工具库" },
+                            { key: "modes", icon: "layout-dashboard", label: "模式" },
+                            { key: "packets", icon: "package", label: "引导" },
+                            { key: "firmware", icon: "download-cloud", label: "固件" },
+                            { key: "batch", icon: "list-checks", label: "批量" },
+                            { key: "logs", icon: "file-text", label: "日志" },
+                            { key: "official", icon: "box", label: "官方" },
+                            { key: "settings", icon: "settings", label: "设置" }
+                        ]
+
+                        Repeater {
+                            model: parent.items
+                            delegate: Item {
+                                width: 46; height: 48
+                                Rectangle {
+                                    anchors.fill: parent
+                                    radius: Theme.r6
+                                    color: win.currentPage === modelData.key ? "#3B372E" : "transparent"
+                                }
+                                Column {
+                                    anchors.centerIn: parent
+                                    spacing: 2
+                                    IconImage {
+                                        anchors.horizontalCenter: parent.horizontalCenter
+                                        name: modelData.icon
+                                        size: 18
+                                        tint: win.currentPage === modelData.key ? Theme.accent : "#B9AE9A"
+                                    }
+                                    Text {
+                                        anchors.horizontalCenter: parent.horizontalCenter
+                                        text: modelData.label
+                                        color: win.currentPage === modelData.key ? Theme.accent : "#9C9182"
+                                        font.pixelSize: 9
+                                    }
+                                }
+                                MouseArea {
+                                    anchors.fill: parent
+                                    hoverEnabled: true
+                                    cursorShape: Qt.PointingHandCursor
+                                    onClicked: {
+                                        if (modelData.key === "console")
+                                            win.popToConsole()
+                                        else
+                                            win.openPageByKey(modelData.key)
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
 
                 Item {
-                    width: 34; height: 32
-                    Rectangle {
+                    width: parent.width - 54
+                    height: parent.height
+
+                    Column {
                         anchors.fill: parent
-                        color: themeMouse.containsMouse ? Theme.panelHover : "transparent"
-                    }
-                    IconImage {
-                        anchors.centerIn: parent
-                        name: Theme.darkMode ? "sun" : "moon"
-                        size: 13
-                        tint: Theme.textSub
-                    }
-                    MouseArea {
-                        id: themeMouse
-                        anchors.fill: parent
-                        hoverEnabled: true
-                        cursorShape: Qt.PointingHandCursor
-                        onClicked: App.settings.themeMode = Theme.darkMode ? "light" : "dark"
-                    }
-                }
+                        spacing: 0
 
-                WindowButton { kind: 0; implicitHeight: 32; onClicked: win.showMinimized() }
-                WindowButton { kind: 1; implicitHeight: 32; onClicked: win.toggleMaximize() }
-                WindowButton { kind: 2; implicitHeight: 32; onClicked: win.close() }
-            }
-        }
-
-        // -------------------------------------------------------- menu bar
-        Item {
-            id: menuBar
-            anchors.top: titleBar.bottom
-            anchors.left: parent.left
-            anchors.right: parent.right
-            height: 24
-
-            Rectangle {
-                anchors.bottom: parent.bottom
-                width: parent.width
-                height: 1
-                color: Theme.divider
-            }
-
-            Row {
-                anchors.left: parent.left
-                anchors.leftMargin: 4
-                anchors.verticalCenter: parent.verticalCenter
-                spacing: 0
-
-                Repeater {
-                    model: [
-                        { label: "文件(F)", menu: fileMenu },
-                        { label: "设备(D)", menu: deviceMenu },
-                        { label: "工具(T)", menu: toolsMenu },
-                        { label: "视图(V)", menu: viewMenu },
-                        { label: "帮助(H)", menu: helpMenu }
-                    ]
-                    delegate: Item {
-                        width: menuText.implicitWidth + 18
-                        height: 24
                         Rectangle {
-                            anchors.fill: parent
-                            color: mbMouse.containsMouse || modelData.menu.visible ? Theme.panelHover : "transparent"
+                            width: parent.width
+                            height: stack.depth > 1 ? 32 : 0
+                            visible: height > 0
+                            color: Theme.panelAlt
+
+                            Row {
+                                anchors.left: parent.left
+                                anchors.leftMargin: 8
+                                anchors.verticalCenter: parent.verticalCenter
+                                spacing: 8
+                                AppButton {
+                                    text: "返回刷机台"
+                                    icon: "arrow-left"
+                                    kind: 2
+                                    small: true
+                                    onClicked: win.popToConsole()
+                                }
+                                Text {
+                                    text: "刷机台 / " + win.pageLabel(win.currentPage)
+                                    color: Theme.textMuted
+                                    font.pixelSize: 10
+                                    anchors.verticalCenter: parent.verticalCenter
+                                }
+                            }
+                            Rectangle {
+                                anchors.bottom: parent.bottom
+                                width: parent.width
+                                height: 1
+                                color: Theme.divider
+                            }
                         }
-                        Text {
-                            id: menuText
-                            anchors.centerIn: parent
-                            text: modelData.label
-                            color: Theme.text
-                            font.pixelSize: 11
-                        }
-                        MouseArea {
-                            id: mbMouse
-                            anchors.fill: parent
-                            hoverEnabled: true
-                            cursorShape: Qt.PointingHandCursor
-                            onClicked: {
-                                if (modelData.menu.visible)
-                                    modelData.menu.close()
-                                else
-                                    modelData.menu.popup()
+
+                        StackView {
+                            id: stack
+                            x: 8
+                            width: parent.width - 16
+                            height: parent.height - (stack.depth > 1 ? 32 : 0)
+                            initialItem: FlashConsolePage {
+                                id: console
+                                onOpenMode: function(modeId) { win.openModePage(modeId) }
+                                onOpenPage: function(key) { win.openPageByKey(key) }
                             }
                         }
                     }
                 }
             }
-        }
 
-        // -------------------------------------------------------- toolbar
-        Item {
-            id: toolBar
-            anchors.top: menuBar.bottom
-            anchors.left: parent.left
-            anchors.right: parent.right
-            height: 36
             Rectangle {
-                anchors.fill: parent
-                color: Theme.toolbar
-            }
-            Rectangle {
-                anchors.bottom: parent.bottom
+                id: statusBar
                 width: parent.width
-                height: 1
-                color: Theme.border
-            }
+                height: 26
+                color: Theme.panelAlt
 
-            Row {
-                anchors.left: parent.left
-                anchors.leftMargin: 6
-                anchors.verticalCenter: parent.verticalCenter
-                spacing: 4
-                AppButton { text: "刷新设备"; icon: "refresh-cw"; kind: 1; small: true; onClicked: { App.scanPorts(); App.refreshDevices() } }
-                AppButton { text: "读取分区"; icon: "hard-drive"; kind: 1; small: true; onClicked: win.navigate(1) }
-                AppButton { text: "分区备份"; icon: "hard-drive-download"; kind: 1; small: true; onClicked: win.navigate(2) }
-                AppButton { text: "刷写固件"; icon: "file-up"; kind: 0; small: true; onClicked: win.navigate(3) }
-                Rectangle { width: 1; height: 18; color: Theme.border }
-                AppButton { text: "引导包"; icon: "package"; kind: 2; small: true; onClicked: win.navigate(4) }
-                AppButton { text: "官方工具"; icon: "box"; kind: 2; small: true; onClicked: win.navigate(8) }
-            }
+                Rectangle { anchors.top: parent.top; width: parent.width; height: 1; color: Theme.divider }
 
-            Row {
-                anchors.right: parent.right
-                anchors.rightMargin: 8
-                anchors.verticalCenter: parent.verticalCenter
-                spacing: 10
-                Text {
-                    text: "端口 " + App.flashPorts.length + "   ADB " + App.adbDevices.length
-                          + "   Fastboot " + App.fastbootDevices.length
-                    color: Theme.textMuted
-                    font.pixelSize: 10
+                Row {
+                    anchors.left: parent.left
+                    anchors.leftMargin: 10
                     anchors.verticalCenter: parent.verticalCenter
-                }
-            }
-        }
+                    spacing: 14
 
-        // -------------------------------------------------------- body
-        Row {
-            anchors.top: toolBar.bottom
-            anchors.left: parent.left
-            anchors.right: parent.right
-            anchors.bottom: statusBar.top
-
-            // sidebar
-            Rectangle {
-                id: sidebar
-                width: 176
-                height: parent.height
-                color: Theme.sidebar
-                border.width: 0
-
-                Rectangle {
-                    anchors.right: parent.right
-                    width: 1
-                    height: parent.height
-                    color: Theme.divider
-                }
-
-                Column {
-                    anchors.top: parent.top
-                    anchors.topMargin: 6
-                    anchors.left: parent.left
-                    anchors.right: parent.right
-                    spacing: 0
-
-                    Repeater {
-                        model: win.navModel
-                        delegate: NavItem {
-                            text: modelData.label
-                            icon: modelData.icon
-                            active: win.navIndex === index
-                            onClicked: win.navigate(index)
-                        }
-                    }
-                }
-
-                Column {
-                    anchors.left: parent.left
-                    anchors.right: parent.right
-                    anchors.bottom: parent.bottom
-                    anchors.margins: 8
-                    spacing: 3
                     Text {
-                        text: App.deviceInfo.connected
-                              ? ("● " + (App.deviceInfo.model || App.deviceInfo.serial || "设备已连接"))
-                              : "○ 未连接设备"
-                        color: App.deviceInfo.connected ? Theme.success : Theme.textMuted
+                        text: "设备: " + (App.deviceInfo.serial || App.deviceInfo.model || "—")
+                        color: Theme.textSub
                         font.pixelSize: 10
-                        elide: Text.ElideRight
-                        width: parent.width
                     }
                     Text {
-                        text: App.flashPorts.length + " 端口 · " + App.driverSummaryText()
+                        text: "BL: " + (App.deviceInfo.bootloader || "—")
+                        color: Theme.textSub
+                        font.pixelSize: 10
+                    }
+                    Text {
+                        text: "槽位: " + (App.deviceInfo.slot || "—")
+                        color: Theme.textSub
+                        font.pixelSize: 10
+                    }
+                    Text {
+                        text: "端口: " + App.flashPorts.length
                         color: Theme.textMuted
                         font.pixelSize: 10
-                        elide: Text.ElideRight
-                        width: parent.width
                     }
-                }
-            }
-
-            // content
-            Item {
-                id: contentArea
-                width: parent.width - sidebar.width
-                height: parent.height
-                Rectangle {
-                    anchors.fill: parent
-                    color: Theme.windowBg
-                }
-
-                Item {
-                    anchors.fill: parent
-                    anchors.margins: 8
-
-                    StackView {
-                        id: stack
-                        anchors.fill: parent
-                        initialItem: homeComp
-
-                        pushEnter: Transition { NumberAnimation { property: "opacity"; from: 0; to: 1; duration: 100 } }
-                        pushExit: Transition { NumberAnimation { property: "opacity"; to: 0; duration: 60 } }
-                        popEnter: Transition { NumberAnimation { property: "opacity"; from: 0; to: 1; duration: 100 } }
-                        popExit: Transition { NumberAnimation { property: "opacity"; to: 0; duration: 60 } }
-                        replaceEnter: Transition { NumberAnimation { property: "opacity"; from: 0; to: 1; duration: 100 } }
-                        replaceExit: Transition { NumberAnimation { property: "opacity"; to: 0; duration: 60 } }
+                    Text {
+                        text: "引导包: " + App.packets.packets.length
+                        color: Theme.textMuted
+                        font.pixelSize: 10
                     }
-                }
-            }
-        }
-
-        // -------------------------------------------------------- status bar
-        Item {
-            id: statusBar
-            anchors.left: parent.left
-            anchors.right: parent.right
-            anchors.bottom: parent.bottom
-            height: 22
-
-            Rectangle {
-                anchors.top: parent.top
-                width: parent.width
-                height: 1
-                color: Theme.border
-            }
-            Rectangle {
-                anchors.fill: parent
-                color: Theme.toolbar
-                z: -1
-            }
-
-            Row {
-                anchors.left: parent.left
-                anchors.leftMargin: 8
-                anchors.verticalCenter: parent.verticalCenter
-                spacing: 12
-                Text {
-                    text: App.deviceInfo.connected
-                          ? ("设备: " + (App.deviceInfo.model || App.deviceInfo.serial || "-"))
-                            + (App.deviceInfo.mode === "fastboot" ? "  [Fastboot]" : "")
-                          : "设备: 未连接"
-                    color: Theme.textSub
-                    font.pixelSize: 10
-                }
-                Text {
-                    text: "BL: " + (App.deviceInfo.bootloader || "—")
-                    color: Theme.textMuted
-                    font.pixelSize: 10
-                }
-                Text {
-                    text: "槽位: " + (App.deviceInfo.slot || "—")
-                    color: Theme.textMuted
-                    font.pixelSize: 10
-                }
-                Text {
-                    text: "端口: " + App.flashPorts.length
-                    color: Theme.textMuted
-                    font.pixelSize: 10
-                }
-                Text {
-                    text: "驱动: " + App.driverSummaryText()
-                    color: Theme.textMuted
-                    font.pixelSize: 10
-                }
-                Text {
-                    visible: (App.deviceInfo.battery || "").length > 0
-                    text: "电量: " + App.deviceInfo.battery + " mV"
-                    color: App.deviceInfo.batteryOk === false ? Theme.danger : Theme.textMuted
-                    font.pixelSize: 10
-                }
-            }
-
-            Row {
-                anchors.right: parent.right
-                anchors.rightMargin: 8
-                anchors.verticalCenter: parent.verticalCenter
-                spacing: 10
-                Text {
-                    text: "XMF v" + App.version
-                    color: Theme.textMuted
-                    font.pixelSize: 10
-                }
-            }
-        }
-
-        TaskDock {
-            anchors.right: parent.right
-            anchors.rightMargin: 12
-            anchors.bottom: statusBar.top
-            anchors.bottomMargin: 10
-        }
-
-        ToastHost { id: toast }
-
-        // 有任务运行时退出确认，避免刷写中途关掉程序
-        Item {
-            id: exitConfirm
-            anchors.fill: parent
-            visible: false
-            z: 3000
-
-            Rectangle {
-                anchors.fill: parent
-                color: Theme.darkMode ? "#99000000" : "#66000000"
-                MouseArea { anchors.fill: parent; acceptedButtons: Qt.AllButtons }
-            }
-
-            Rectangle {
-                anchors.centerIn: parent
-                width: 380
-                height: 150
-                radius: Theme.r16
-                color: Theme.panel
-                border.width: 1
-                border.color: Theme.borderStrong
-
-                Text {
-                    anchors.left: parent.left
-                    anchors.right: parent.right
-                    anchors.top: parent.top
-                    anchors.margins: 16
-                    text: "还有 " + App.activeTasks.length + " 个任务正在运行"
-                    color: Theme.text
-                    font.pixelSize: 13
-                    font.weight: Font.DemiBold
-                }
-                Text {
-                    anchors.left: parent.left
-                    anchors.right: parent.right
-                    anchors.top: parent.top
-                    anchors.topMargin: 44
-                    anchors.margins: 16
-                    text: "此时退出可能中断刷写并让设备停留在半刷状态。"
-                    color: Theme.textSub
-                    font.pixelSize: 11
-                    wrapMode: Text.WordWrap
                 }
 
                 Row {
                     anchors.right: parent.right
-                    anchors.bottom: parent.bottom
-                    anchors.margins: 14
-                    spacing: 8
-                    AppButton {
-                        text: "继续等待"
-                        kind: 1
-                        onClicked: exitConfirm.visible = false
+                    anchors.rightMargin: 10
+                    anchors.verticalCenter: parent.verticalCenter
+                    spacing: 12
+                    Text {
+                        text: App.activeTasks.length > 0 ? "任务 " + App.activeTasks.length : "就绪"
+                        color: App.activeTasks.length > 0 ? Theme.accent : Theme.textMuted
+                        font.pixelSize: 10
                     }
+                    Text {
+                        text: "XMF v" + App.version
+                        color: Theme.textMuted
+                        font.pixelSize: 10
+                    }
+                }
+            }
+        }
+
+        // resize handles above every bar, including the caption
+        MouseArea {
+            anchors.left: parent.left; anchors.right: parent.right; anchors.top: parent.top
+            height: 6; z: 5000; enabled: !win.maximized
+            cursorShape: Qt.SizeVerCursor
+            onPressed: win.startSystemResize(Qt.TopEdge)
+        }
+        MouseArea {
+            anchors.left: parent.left; anchors.right: parent.right; anchors.bottom: parent.bottom
+            height: 6; z: 5000; enabled: !win.maximized
+            cursorShape: Qt.SizeVerCursor
+            onPressed: win.startSystemResize(Qt.BottomEdge)
+        }
+        MouseArea {
+            anchors.left: parent.left; anchors.top: parent.top; anchors.bottom: parent.bottom
+            width: 6; z: 5000; enabled: !win.maximized
+            cursorShape: Qt.SizeHorCursor
+            onPressed: win.startSystemResize(Qt.LeftEdge)
+        }
+        MouseArea {
+            anchors.right: parent.right; anchors.top: parent.top; anchors.bottom: parent.bottom
+            width: 6; z: 5000; enabled: !win.maximized
+            cursorShape: Qt.SizeHorCursor
+            onPressed: win.startSystemResize(Qt.RightEdge)
+        }
+        MouseArea {
+            anchors.left: parent.left; anchors.top: parent.top
+            width: 10; height: 10; z: 5001; enabled: !win.maximized
+            cursorShape: Qt.SizeFDiagCursor
+            onPressed: win.startSystemResize(Qt.TopEdge | Qt.LeftEdge)
+        }
+        MouseArea {
+            anchors.right: parent.right; anchors.top: parent.top
+            width: 10; height: 10; z: 5001; enabled: !win.maximized
+            cursorShape: Qt.SizeBDiagCursor
+            onPressed: win.startSystemResize(Qt.TopEdge | Qt.RightEdge)
+        }
+        MouseArea {
+            anchors.left: parent.left; anchors.bottom: parent.bottom
+            width: 10; height: 10; z: 5001; enabled: !win.maximized
+            cursorShape: Qt.SizeBDiagCursor
+            onPressed: win.startSystemResize(Qt.BottomEdge | Qt.LeftEdge)
+        }
+        MouseArea {
+            anchors.right: parent.right; anchors.bottom: parent.bottom
+            width: 10; height: 10; z: 5001; enabled: !win.maximized
+            cursorShape: Qt.SizeFDiagCursor
+            onPressed: win.startSystemResize(Qt.BottomEdge | Qt.RightEdge)
+        }
+    }
+
+    ToastHost { id: toast; anchors.fill: parent }
+
+    Item {
+        id: exitConfirm
+        anchors.fill: parent
+        visible: false
+        z: 3000
+
+        Rectangle {
+            anchors.fill: parent
+            color: Theme.darkMode ? "#99000000" : "#66000000"
+            MouseArea { anchors.fill: parent; acceptedButtons: Qt.AllButtons }
+        }
+
+        Rectangle {
+            anchors.centerIn: parent
+            width: 400
+            height: 160
+            radius: Theme.r6
+            color: Theme.panel
+            border.width: 1
+            border.color: Theme.borderStrong
+
+            Column {
+                anchors.fill: parent
+                anchors.margins: 18
+                spacing: 12
+                Text {
+                    text: "还有 " + App.activeTasks.length + " 个任务正在运行"
+                    color: Theme.text
+                    font.pixelSize: 14
+                    font.weight: Font.DemiBold
+                }
+                Text {
+                    text: "刷写过程中退出可能导致设备异常，确定要退出吗？"
+                    color: Theme.textMuted
+                    font.pixelSize: 11
+                    wrapMode: Text.Wrap
+                    width: parent.width
+                }
+                Row {
+                    spacing: 8
+                    AppButton { text: "继续等待"; kind: 1; small: true; onClicked: exitConfirm.visible = false }
                     AppButton {
                         text: "取消任务并退出"
                         kind: 3
+                        small: true
                         onClicked: {
                             App.cancelAllTasks()
                             win.forceClose = true
@@ -567,91 +646,8 @@ Window {
                 }
             }
         }
-
-        // resize handles
-        MouseArea { anchors.left: parent.left; anchors.top: parent.top; anchors.bottom: parent.bottom; width: 5; cursorShape: Qt.SizeHorCursor; onPressed: win.startSystemResize(Qt.LeftEdge) }
-        MouseArea { anchors.right: parent.right; anchors.top: parent.top; anchors.bottom: parent.bottom; width: 5; cursorShape: Qt.SizeHorCursor; onPressed: win.startSystemResize(Qt.RightEdge) }
-        MouseArea { anchors.left: parent.left; anchors.right: parent.right; anchors.top: parent.top; anchors.topMargin: 32; height: 4; cursorShape: Qt.SizeVerCursor; onPressed: win.startSystemResize(Qt.TopEdge) }
-        MouseArea { anchors.left: parent.left; anchors.right: parent.right; anchors.bottom: parent.bottom; height: 4; cursorShape: Qt.SizeVerCursor; onPressed: win.startSystemResize(Qt.BottomEdge) }
     }
 
-    // ------------------------------------------------------------------ menus
-    Menu { id: fileMenu; width: 190
-        MenuItem { text: "打开日志目录"; onTriggered: App.openPath(App.dataPath) }
-        MenuItem { text: "打开数据目录"; onTriggered: App.openPath(App.dataPath) }
-        MenuSeparator { }
-        MenuItem { text: "退出"; onTriggered: win.close() }
-    }
-    Menu { id: deviceMenu; width: 190
-        MenuItem { text: "刷新端口"; onTriggered: App.scanPorts() }
-        MenuItem { text: "刷新 ADB / Fastboot"; onTriggered: App.refreshDevices() }
-        MenuItem { text: "读取设备分区"; onTriggered: win.navigate(1) }
-        MenuSeparator { }
-        MenuItem { text: "安装驱动"; onTriggered: App.installDrivers() }
-    }
-    Menu { id: toolsMenu; width: 190
-        MenuItem { text: "工具库"; onTriggered: win.navigate(2) }
-        MenuItem { text: "内置模式"; onTriggered: win.navigate(3) }
-        MenuItem { text: "官方工具"; onTriggered: win.navigate(8) }
-        MenuItem { text: "命令控制台"; onTriggered: win.navigate(10) }
-        MenuItem { text: "批量任务"; onTriggered: win.navigate(6) }
-    }
-    Menu { id: viewMenu; width: 190
-        MenuItem { text: "浅色主题"; onTriggered: App.settings.themeMode = "light" }
-        MenuItem { text: "深色主题"; onTriggered: App.settings.themeMode = "dark" }
-        MenuItem { text: "跟随系统"; onTriggered: App.settings.themeMode = "auto" }
-        MenuSeparator { }
-        MenuItem { text: "日志"; onTriggered: win.navigate(7) }
-        MenuItem { text: "设置"; onTriggered: win.navigate(9) }
-    }
-    Menu { id: helpMenu; width: 190
-        MenuItem {
-            text: "使用指南"
-            onTriggered: {
-                if (App.openDocs("USER_GUIDE.md").length === 0)
-                    App.notify("error", "未找到 docs/USER_GUIDE.md")
-            }
-        }
-        MenuItem {
-            text: "更新记录"
-            onTriggered: {
-                if (App.openDocs("CHANGELOG.md").length === 0)
-                    App.notify("error", "未找到 docs/CHANGELOG.md")
-            }
-        }
-        MenuItem {
-            text: "功能覆盖矩阵"
-            onTriggered: {
-                if (App.openDocs("FEATURE_COVERAGE.md").length === 0)
-                    App.notify("error", "未找到 docs/FEATURE_COVERAGE.md")
-            }
-        }
-        MenuItem { text: "数据与日志目录"; onTriggered: App.openPath(App.dataPath) }
-        MenuItem {
-            text: "运行环境自检"
-            onTriggered: {
-                if (App.runTool("system.selfTest", ({})) > 0)
-                    App.notify("info", "环境自检已开始，结果见日志与任务面板")
-                else
-                    App.notify("error", "环境自检启动失败")
-            }
-        }
-        MenuItem {
-            text: "导出诊断信息"
-            onTriggered: {
-                const path = App.writeDiagnostics()
-                if (path.length > 0) {
-                    App.notify("success", "诊断报告已导出")
-                    App.revealPath(path)
-                } else {
-                    App.notify("error", "诊断报告导出失败")
-                }
-            }
-        }
-        MenuItem { text: "关于 XMF"; onTriggered: App.notify("info", "XMF Flash Tool v" + App.version) }
-    }
-
-    // ---------------------------------------------------------- disclaimer
     Rectangle {
         id: disclaimerOverlay
         anchors.fill: parent
@@ -659,12 +655,10 @@ Window {
         color: "#B3000000"
         z: 10000
 
-        // Block every interaction with the main UI until the user agrees.
         MouseArea {
             anchors.fill: parent
             acceptedButtons: Qt.AllButtons
             onPressed: function(mouse) { mouse.accepted = true }
-            onWheel: function(wheel) { wheel.accepted = true }
         }
 
         GlassSurface {
@@ -679,15 +673,13 @@ Window {
                 anchors.bottomMargin: 64
                 clip: true
                 contentHeight: disclaimerText.height
-                boundsBehavior: Flickable.StopAtBounds
-
                 TextArea {
                     id: disclaimerText
                     width: parent.width
                     readOnly: true
                     wrapMode: TextArea.Wrap
                     color: Theme.text
-                    font.pixelSize: 11
+                    font.pixelSize: 12
                     background: null
                     textFormat: TextEdit.PlainText
                     text: "XMF Flash Tool 仅供学习研究与个人设备维护使用。\n\n"
@@ -706,43 +698,30 @@ Window {
                 anchors.margins: 16
                 height: 32
 
-                Item {
+                CheckBox {
+                    id: agreeCheck
+                    text: "我已阅读并同意以上免责声明"
+                    font.pixelSize: 11
                     anchors.left: parent.left
+                    anchors.verticalCenter: parent.verticalCenter
+                }
+                Row {
+                    spacing: 8
                     anchors.right: parent.right
-                    anchors.bottom: parent.bottom
-                    height: 32
-
-                    CheckBox {
-                        id: agreeCheck
-                        text: "我已阅读并同意以上免责声明"
-                        font.pixelSize: 11
-                        anchors.left: parent.left
-                        anchors.verticalCenter: parent.verticalCenter
-                    }
-                    Row {
-                        spacing: 8
-                        anchors.right: parent.right
-                        anchors.verticalCenter: parent.verticalCenter
-                        AppButton {
-                            text: "退出"
-                            kind: 2
-                            small: true
-                            onClicked: Qt.quit()
-                        }
-                        AppButton {
-                            text: "同意并继续"
-                            kind: 0
-                            small: true
-                            enabled: agreeCheck.checked
-                            onClicked: App.acceptDisclaimer()
-                        }
+                    anchors.verticalCenter: parent.verticalCenter
+                    AppButton { text: "退出"; kind: 2; small: true; onClicked: Qt.quit() }
+                    AppButton {
+                        text: "同意并继续"
+                        kind: 0
+                        small: true
+                        enabled: agreeCheck.checked
+                        onClicked: App.acceptDisclaimer()
                     }
                 }
             }
         }
     }
 
-    // ---------------------------------------------------------------- signals
     Connections {
         target: App
         function onNotifyRequested(type, message) { toast.show(type, message) }
@@ -758,26 +737,23 @@ Window {
         onTriggered: App.refreshDevices()
     }
 
-    // -------------------------------------------------------------- components
-    Component { id: homeComp; DashboardPage { onNavigateTo: function(i) { win.navigate(i) } } }
-    Component { id: flashComp; FlashCenterPage { onOpenFlashMode: function(modeId) { win.openFlashMode(modeId) } } }
-    Component { id: imageComp; ToolsPage { categoryFilter: "" } }
+    // --------------------------------------------------------- components
+    Component { id: toolsComp; ToolsPage { categoryFilter: "" } }
     Component { id: modesComp; ModesPage { onOpenMode: function(modeId) { win.openModePage(modeId) } } }
-    Component { id: fastbootModeComp; FastbootModePage { onBackRequested: stack.pop() } }
-    Component { id: recoveryModeComp; RecoveryModePage { onBackRequested: stack.pop() } }
-    Component { id: qcomEdlComp; QualcommEdlModePage { onBackRequested: stack.pop() } }
     Component { id: packetsComp; PacketsPage {} }
     Component { id: firmwareComp; FirmwarePage {} }
     Component { id: batchComp; BatchPage {} }
     Component { id: logsComp; LogsPage {} }
     Component { id: officialComp; OfficialToolsPage { onOpenEmbedded: function(toolId) { win.openEmbeddedTool(toolId) } } }
     Component { id: settingsComp; SettingsPage {} }
-    Component { id: consoleComp; ConsolePage {} }
-
-    Component { id: miflashComp; MiflashModePage { onBackRequested: stack.pop() } }
-    Component { id: spflashComp; SpFlashModePage { onBackRequested: stack.pop() } }
-    Component { id: spdflashComp; SpdFlashModePage { onBackRequested: stack.pop() } }
-    Component { id: rkdevtoolComp; RkDevToolModePage { onBackRequested: stack.pop() } }
-    Component { id: phoenixsuitComp; PhoenixSuitModePage { onBackRequested: stack.pop() } }
-    Component { id: embeddedComp; EmbeddedToolPage { onBackRequested: stack.pop() } }
+    Component { id: consolePageComp; ConsolePage {} }
+    Component { id: miflashComp; MiflashModePage { onBackRequested: win.popToConsole() } }
+    Component { id: spflashComp; SpFlashModePage { onBackRequested: win.popToConsole() } }
+    Component { id: spdflashComp; SpdFlashModePage { onBackRequested: win.popToConsole() } }
+    Component { id: rkdevtoolComp; RkDevToolModePage { onBackRequested: win.popToConsole() } }
+    Component { id: phoenixsuitComp; PhoenixSuitModePage { onBackRequested: win.popToConsole() } }
+    Component { id: fastbootModeComp; FastbootModePage { onBackRequested: win.popToConsole() } }
+    Component { id: recoveryModeComp; RecoveryModePage { onBackRequested: win.popToConsole() } }
+    Component { id: qcomEdlComp; QualcommEdlModePage { onBackRequested: win.popToConsole() } }
+    Component { id: embeddedComp; EmbeddedToolPage { onBackRequested: win.popToConsole() } }
 }

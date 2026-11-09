@@ -1,7 +1,7 @@
 import QtQuick
 import XMF
 
-// Flat sidebar navigation entry: icon + label, accent selection bar.
+// Sidebar entry: amber selection bar, dark text, 34px rows.
 Item {
     id: root
     property string text: ""
@@ -11,9 +11,9 @@ Item {
     property int badge: 0
     signal clicked()
 
-    implicitHeight: 32
-    height: 32
-    width: parent ? parent.width : 160
+    implicitHeight: 34
+    height: 34
+    width: parent ? parent.width : 170
 
     Rectangle {
         anchors.fill: parent
@@ -33,18 +33,18 @@ Item {
         anchors.left: parent.left
         anchors.leftMargin: root.compact ? 12 : 16
         anchors.verticalCenter: parent.verticalCenter
-        spacing: 8
+        spacing: 9
 
         IconImage {
             name: root.icon
-            size: 15
+            size: 16
             tint: root.active ? Theme.accent : Theme.textSub
             anchors.verticalCenter: parent.verticalCenter
         }
         Text {
             text: root.text
-            color: root.active ? Theme.accent : Theme.text
-            font.pixelSize: 12
+            color: root.active ? Theme.text : Theme.textSub
+            font.pixelSize: 13
             font.weight: root.active ? Font.DemiBold : Font.Normal
             anchors.verticalCenter: parent.verticalCenter
         }

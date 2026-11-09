@@ -129,7 +129,7 @@ Item {
                     Rectangle { width: parent.width; height: 1; color: Theme.divider }
                     ListView {
                         width: parent.width
-                        height: parent.height - 142
+                        height: Math.max(120, parent.height - 164)
                         clip: true
                         model: page.models
                         spacing: 0
@@ -164,7 +164,7 @@ Item {
 
                     Column {
                         width: parent.width
-                        height: 110
+                        height: 132
                         spacing: 3
                         Text {
                             text: "官方固件 / 下载入口"

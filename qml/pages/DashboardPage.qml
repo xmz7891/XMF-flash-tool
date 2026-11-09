@@ -43,7 +43,7 @@ Item {
         anchors.left: parent.left
         anchors.right: envPanel.left
         anchors.rightMargin: 8
-        height: 210
+        height: 240
         title: "设备与端口"
 
         Column {
@@ -104,7 +104,7 @@ Item {
         anchors.topMargin: 6
         anchors.right: parent.right
         width: 300
-        height: 210
+        height: 240
         title: "运行环境"
 
         Column {

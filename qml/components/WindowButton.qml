@@ -9,6 +9,8 @@ Item {
     implicitWidth: 40
     implicitHeight: 26
 
+    readonly property color ink: root.hovered && root.kind === 2 ? "#FFFFFF" : Theme.textSub
+
     Rectangle {
         anchors.fill: parent
         color: root.hovered
@@ -20,25 +22,24 @@ Item {
     Rectangle {
         visible: root.kind === 0
         width: 10; height: 1
-        color: root.kind === 2 && root.hovered ? "#FFFFFF" : Theme.text
+        color: root.ink
         anchors.centerIn: parent
     }
 
-    Rectangle {
+    IconImage {
         visible: root.kind === 1
-        width: 9; height: 9
-        color: "transparent"
-        border.width: 1
-        border.color: Theme.text
         anchors.centerIn: parent
+        name: "square"
+        size: 9
+        tint: root.ink
     }
 
-    Item {
+    IconImage {
         visible: root.kind === 2
-        width: 10; height: 10
         anchors.centerIn: parent
-        Rectangle { width: 10; height: 1; color: "#FFFFFF"; anchors.centerIn: parent; rotation: 45 }
-        Rectangle { width: 10; height: 1; color: "#FFFFFF"; anchors.centerIn: parent; rotation: -45 }
+        name: "x"
+        size: 10
+        tint: root.ink
     }
 
     MouseArea {

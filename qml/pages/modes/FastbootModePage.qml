@@ -275,6 +275,14 @@ Item {
                     delegate: Item {
                         width: ListView.view.width
                         height: 26
+                        Rectangle {
+                            anchors.left: parent.left
+                            anchors.right: parent.right
+                            anchors.bottom: parent.bottom
+                            height: 1
+                            color: Theme.divider
+                            opacity: 0.55
+                        }
                         Row {
                             anchors.fill: parent
                             Text {

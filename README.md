@@ -5,7 +5,7 @@
 
 ![main](docs/screenshots/main.png)
 
-[![Release](https://img.shields.io/badge/release-v0.1.1-blue)](https://github.com/xmz7891/XMF-flash-tool/releases)
+[![Release](https://img.shields.io/badge/release-v0.1.2-blue)](https://github.com/xmz7891/XMF-flash-tool/releases)
 [![Qt](https://img.shields.io/badge/Qt-6.8.3-green)](https://www.qt.io/)
 [![C++](https://img.shields.io/badge/C%2B%2B-20-orange)]()
 [![Platform](https://img.shields.io/badge/platform-Windows%2010%20%2F%2011-lightgrey)]()
@@ -33,11 +33,11 @@
 
 ## 简介
 
-XMF Flash Tool 使用 **C++20 + Qt 6.8** 编写，界面为紧凑的桌面工具风格（浅色 / 深色两套中性主题），
-所有操作在主窗口内完成，官方工具（MiFlash、SP Flash Tool、Unisoc Research Download）可内嵌运行、不弹独立窗口。
+XMF Flash Tool 使用 **C++20 + Qt 6.8** 编写，主界面是一块**单屏刷机台**：顶部命令菜单 + 左侧图标轨 + 分区表 / 实时日志 / 引导与固件 / 操作进度同屏，
+其余功能以叠页打开。默认窗口 1180×760、首次启动居中，最小可缩到 1040×680。浅色 / 深色两套中性主题。
 
 > 核心设计：**Fastboot、Recovery（ADB Sideload）、9008(EDL) 是三种完全不同的协议与设备状态，必须分开处理。**
-> 刷机中心会先自动识别设备当前模式，再自动/手动进入对应工作台，避免"把 9008 当 fastboot 刷"的误操作。
+> 刷机台会先自动识别设备当前模式，再自动/手动进入对应工作台，避免"把 9008 当 fastboot 刷"的误操作。
 
 ## 功能特性
 
@@ -86,19 +86,25 @@ XMF Flash Tool 使用 **C++20 + Qt 6.8** 编写，界面为紧凑的桌面工具
 
 ## 界面截图
 
-| 刷机中心（模式分流） | Fastboot 工作台 |
+| 刷机台（分区表 / 日志 / 引导） | 工具库 |
 | --- | --- |
-| ![flash-center](docs/screenshots/flash-center.png) | ![fastboot](docs/screenshots/fastboot.png) |
+| ![main](docs/screenshots/main.png) | ![tools](docs/screenshots/tools.png) |
 
-| Recovery 卡刷 | Qualcomm 9008 / 引导文件 |
+| Fastboot 工作台 | Recovery 卡刷 |
 | --- | --- |
-| ![recovery](docs/screenshots/recovery.png) | ![edl](docs/screenshots/qualcomm-edl.png) |
+| ![fastboot](docs/screenshots/fastboot.png) | ![recovery](docs/screenshots/recovery.png) |
 
-| 自动识别并切换模式 | 首次启动免责声明 |
+| Qualcomm 9008 / 引导文件 | 固件资源 |
 | --- | --- |
-| ![auto-switch](docs/screenshots/auto-switch.png) | ![disclaimer](docs/screenshots/disclaimer.png) |
+| ![edl](docs/screenshots/qualcomm-edl.png) | ![firmware](docs/screenshots/firmware.png) |
 
-![console](docs/screenshots/console.png)
+| 深度刷机引导包 | 首次启动免责声明 |
+| --- | --- |
+| ![packets](docs/screenshots/packets.png) | ![disclaimer](docs/screenshots/disclaimer.png) |
+
+| 命令控制台 | 设置 |
+| --- | --- |
+| ![console](docs/screenshots/console.png) | ![settings](docs/screenshots/settings.png) |
 
 ## 下载与安装
 
@@ -106,10 +112,10 @@ XMF Flash Tool 使用 **C++20 + Qt 6.8** 编写，界面为紧凑的桌面工具
 
 从 [Releases](https://github.com/xmz7891/XMF-flash-tool/releases) 下载：
 
-- `XMF-Flash-Tool-Setup-0.1.1.exe` —— Inno Setup 安装包（默认按当前用户安装，可选桌面快捷方式）
-- `XMF-Flash-Tool-v0.1.1-full.zip` —— 完整便携版（含驱动、平台工具、引导包）
-- `XMF-Flash-Tool-v0.1.1-lite.zip` —— 精简版（仅程序 + Qt 运行库）
-- `XMF-Flash-Tool-v0.1.1-source.zip` —— 源码快照（GitHub 也会自动生成 Source code）
+- `XMF-Flash-Tool-Setup-0.1.2.exe` —— Inno Setup 安装包（默认按当前用户安装，可选桌面快捷方式）
+- `XMF-Flash-Tool-v0.1.2-full.zip` —— 完整便携版（含驱动、平台工具、引导包）
+- `XMF-Flash-Tool-v0.1.2-lite.zip` —— 精简版（仅程序 + Qt 运行库）
+- `XMF-Flash-Tool-v0.1.2-source.zip` —— 源码快照（GitHub 也会自动生成 Source code）
 
 ### 方式二：源码构建
 
@@ -130,11 +136,11 @@ XMF Flash Tool 使用 **C++20 + Qt 6.8** 编写，界面为紧凑的桌面工具
 | Recovery | 关机后按住 `音量+` + `电源`，或 `adb reboot recovery` | ADB Sideload 卡刷 zip |
 | 9008 EDL | `adb reboot edl`、`fastboot oem edl`，或短接/按键进 9008 | Sahara + Firehose 深度刷写/救砖 |
 
-### 2. 打开刷机中心
+### 2. 打开刷机台
 
-- 软件会自动识别模式并打开对应工作台；
-- 若自动识别不生效，可直接在 5 个平台卡片中手动选择「Fastboot / Recovery / 深度刷机」；
-- 识别条上可关闭「自动切换到对应刷机模式」。
+- 软件会自动识别模式并进入对应工作台；
+- 若自动识别不生效，可从顶部「高级功能」菜单手动打开 Fastboot / Recovery / 9008 工作台；
+- 主界面分区表可直接勾选分区、双击选择镜像后刷写。
 
 ### 3. 刷机
 
@@ -225,7 +231,7 @@ data/
 │   └── firmware/         # 固件资源检索
 ├── qml/                  # Qt Quick 界面
 │   ├── components/       # 通用组件（面板、表格、ToolSheet…）
-│   └── pages/            # 页面与内置模式工作台
+│   └── pages/            # 刷机台、工具库、叠页与内置模式工作台
 ├── resources/            # 图标、字体、图片、程序图标
 ├── docs/                 # 文档、截图、参考项目与验证记录
 ├── installer/            # Inno Setup 脚本与许可文本
@@ -255,7 +261,7 @@ XMF.exe [options]
                              fastboot:<platform> | recovery:<platform> | qcom-edl
                              miflash | spflash | spdflash | rkdevtool | phoenixsuit
 --mode <id>                  打开内置模式工作台
---auto-read                  打开刷机中心并读取设备分区
+--auto-read                  打开刷机台并读取设备分区
 --no-auto-switch             本次启动关闭自动模式切换
 --theme dark|light           强制主题
 --accept-disclaimer          同意免责声明并退出（部署用）

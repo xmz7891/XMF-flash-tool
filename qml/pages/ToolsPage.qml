@@ -63,48 +63,42 @@ Item {
             }
         }
 
-        // category tabs
-        Flickable {
+        // category tabs: wrap instead of clipping at compact widths
+        Flow {
+            id: tabsFlow
             width: parent.width
-            height: 26
-            contentWidth: tabs.width
-            clip: true
-            boundsBehavior: Flickable.StopAtBounds
+            spacing: 2
 
-            Row {
-                id: tabs
-                spacing: 0
-                Repeater {
-                    model: [{ id: "", name: "全部" }].concat(App.categories)
-                    delegate: Item {
-                        width: tabText.implicitWidth + 22
-                        height: 26
-                        Rectangle {
-                            anchors.fill: parent
-                            color: page.category === modelData.id ? Theme.selection
-                                                                  : (tabMouse.containsMouse ? Theme.panelHover : "transparent")
-                        }
-                        Rectangle {
-                            anchors.bottom: parent.bottom
-                            width: parent.width
-                            height: 2
-                            color: Theme.accent
-                            visible: page.category === modelData.id
-                        }
-                        Text {
-                            id: tabText
-                            anchors.centerIn: parent
-                            text: modelData.name
-                            color: page.category === modelData.id ? Theme.accent : Theme.textSub
-                            font.pixelSize: 11
-                        }
-                        MouseArea {
-                            id: tabMouse
-                            anchors.fill: parent
-                            hoverEnabled: true
-                            cursorShape: Qt.PointingHandCursor
-                            onClicked: page.category = modelData.id
-                        }
+            Repeater {
+                model: [{ id: "", name: "全部" }].concat(App.categories)
+                delegate: Item {
+                    width: tabText.implicitWidth + 22
+                    height: 26
+                    Rectangle {
+                        anchors.fill: parent
+                        color: page.category === modelData.id ? Theme.selection
+                                                              : (tabMouse.containsMouse ? Theme.panelHover : "transparent")
+                    }
+                    Rectangle {
+                        anchors.bottom: parent.bottom
+                        width: parent.width
+                        height: 2
+                        color: Theme.accent
+                        visible: page.category === modelData.id
+                    }
+                    Text {
+                        id: tabText
+                        anchors.centerIn: parent
+                        text: modelData.name
+                        color: page.category === modelData.id ? Theme.accent : Theme.textSub
+                        font.pixelSize: 11
+                    }
+                    MouseArea {
+                        id: tabMouse
+                        anchors.fill: parent
+                        hoverEnabled: true
+                        cursorShape: Qt.PointingHandCursor
+                        onClicked: page.category = modelData.id
                     }
                 }
             }
@@ -133,7 +127,7 @@ Item {
 
         Item {
             width: parent.width
-            height: parent.height - 128
+            height: Math.max(80, parent.height - 66 - tabsFlow.height - 24 - 18)
 
             ListView {
                 id: list
