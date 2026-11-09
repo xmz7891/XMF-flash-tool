@@ -116,7 +116,9 @@ QVariantMap fastbootResult(const QString& serial)
             return emptyResult(error);
     }
     QMap<QString, QString> vars = device::FastbootClient::getvarAll(resolved, &error);
-    const QList<device::FastbootPartition> parts = device::FastbootClient::partitions(resolved, &error);
+    // Reuse the variables we already fetched instead of running getvar all twice
+    // (a slow/hung bootloader must not be queried twice for one page refresh).
+    const QList<device::FastbootPartition> parts = device::parsePartitionTable(vars);
     if (parts.isEmpty())
         return emptyResult(error.isEmpty() ? QStringLiteral("设备没有返回分区信息") : error);
 

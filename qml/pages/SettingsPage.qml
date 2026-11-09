@@ -355,7 +355,7 @@ Item {
                             kind: 1
                             small: true
                             anchors.verticalCenter: parent.verticalCenter
-                            onClicked: App.notify("info", "当前已是最新版本")
+                            onClicked: App.openUrl("https://github.com/xmz7891/XMF-flash-tool/releases/latest")
                         }
                     }
                 }

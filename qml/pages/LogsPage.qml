@@ -178,6 +178,7 @@ Item {
                         id: rowMouse
                         anchors.fill: parent
                         hoverEnabled: true
+                        acceptedButtons: Qt.NoButton
                     }
                 }
 

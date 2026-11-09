@@ -368,7 +368,7 @@ Item {
 
         Row {
             width: parent.width
-            height: page.height - 404
+            height: Math.max(160, page.height - 438)
             spacing: 12
 
             GlassSurface {

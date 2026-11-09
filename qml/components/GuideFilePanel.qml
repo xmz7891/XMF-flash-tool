@@ -181,7 +181,7 @@ Item {
                     background: Rectangle { radius: Theme.r8; color: Theme.panelAlt; border.width: 1; border.color: Theme.border }
                     contentItem: Text {
                         leftPadding: 6
-                        text: packetCombo.currentIndex >= 0
+                        text: packetCombo.count > 0 && packetCombo.currentIndex >= 0
                               ? String(packetCombo.model[packetCombo.currentIndex].name || "") : "—"
                         color: Theme.text
                         font.pixelSize: 10
@@ -208,7 +208,7 @@ Item {
                     background: Rectangle { radius: Theme.r8; color: Theme.panelAlt; border.width: 1; border.color: Theme.border }
                     contentItem: Text {
                         leftPadding: 6
-                        text: modelCombo.currentIndex >= 0
+                        text: modelCombo.count > 0 && modelCombo.currentIndex >= 0
                               ? String(modelCombo.model[modelCombo.currentIndex].name || "") : "—"
                         color: Theme.text
                         font.pixelSize: 10
@@ -234,7 +234,8 @@ Item {
                     background: Rectangle { radius: Theme.r8; color: Theme.panelAlt; border.width: 1; border.color: Theme.border }
                     contentItem: Text {
                         leftPadding: 6
-                        text: attrCombo.currentIndex >= 0 ? String(attrCombo.model[attrCombo.currentIndex]) : "—"
+                        text: attrCombo.count > 0 && attrCombo.currentIndex >= 0
+                              ? String(attrCombo.model[attrCombo.currentIndex]) : "—"
                         color: Theme.text
                         font.pixelSize: 10
                         verticalAlignment: Text.AlignVCenter

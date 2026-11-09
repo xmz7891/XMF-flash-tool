@@ -123,38 +123,42 @@ Item {
                 }
                 Rectangle { width: parent.width; height: 1; color: Theme.divider }
 
-                ListView {
+                Item {
                     width: parent.width
-                    height: parent.height - 24
-                    clip: true
-                    model: page.models
-                    spacing: 0
-                    ScrollBar.vertical: ScrollBar { policy: ScrollBar.AsNeeded }
-                    delegate: Item {
-                        width: ListView.view.width
-                        height: 24
-                        Rectangle { anchors.fill: parent; color: mRow.containsMouse ? Theme.panelHover : "transparent" }
-                        Row {
-                            anchors.fill: parent
-                            anchors.leftMargin: 2
-                            Text { width: 130; text: modelData.brand || ""; color: Theme.textSub; font.pixelSize: 11; elide: Text.ElideRight }
-                            Text { width: 150; text: modelData.series || ""; color: Theme.textSub; font.pixelSize: 11; elide: Text.ElideRight }
-                            Text { width: 240; text: modelData.name || ""; color: Theme.text; font.pixelSize: 11; elide: Text.ElideRight }
-                            Text { text: modelData.description || ""; color: Theme.textMuted; font.pixelSize: 10; elide: Text.ElideRight }
-                        }
-                        MouseArea { id: mRow; anchors.fill: parent; hoverEnabled: true }
-                    }
-                }
+                    height: parent.height - 25
 
-                EmptyState {
-                    anchors.fill: parent
-                    anchors.topMargin: 22
-                    visible: page.selectedPacket === "" || page.models.length === 0
-                    icon: "package"
-                    title: page.packetList.length === 0 ? "没有引导包" : "选择引导包查看机型"
-                    text: page.packetList.length === 0
-                          ? "放入 data/packets 或点击右上角导入。"
-                          : "点击上方引导包即可展开其中的品牌、系列、机型与引导文件。"
+                    ListView {
+                        anchors.fill: parent
+                        clip: true
+                        model: page.models
+                        spacing: 0
+                        ScrollBar.vertical: ScrollBar { policy: ScrollBar.AsNeeded }
+                        delegate: Item {
+                            width: ListView.view.width
+                            height: 24
+                            Rectangle { anchors.fill: parent; color: mRow.containsMouse ? Theme.panelHover : "transparent" }
+                            Row {
+                                anchors.fill: parent
+                                anchors.leftMargin: 2
+                                Text { width: 130; text: modelData.brand || ""; color: Theme.textSub; font.pixelSize: 11; elide: Text.ElideRight }
+                                Text { width: 150; text: modelData.series || ""; color: Theme.textSub; font.pixelSize: 11; elide: Text.ElideRight }
+                                Text { width: 240; text: modelData.name || ""; color: Theme.text; font.pixelSize: 11; elide: Text.ElideRight }
+                                Text { text: modelData.description || ""; color: Theme.textMuted; font.pixelSize: 10; elide: Text.ElideRight }
+                            }
+                            MouseArea { id: mRow; anchors.fill: parent; hoverEnabled: true; acceptedButtons: Qt.NoButton }
+                        }
+                    }
+
+                    EmptyState {
+                        anchors.fill: parent
+                        anchors.topMargin: 22
+                        visible: page.selectedPacket === "" || page.models.length === 0
+                        icon: "package"
+                        title: page.packetList.length === 0 ? "没有引导包" : "选择引导包查看机型"
+                        text: page.packetList.length === 0
+                              ? "放入 data/packets 或点击右上角导入。"
+                              : "点击上方引导包即可展开其中的品牌、系列、机型与引导文件。"
+                    }
                 }
             }
         }

@@ -299,7 +299,7 @@ Item {
                                 font.pixelSize: 11
                             }
                         }
-                        MouseArea { id: fMouse; anchors.fill: parent; hoverEnabled: true }
+                        MouseArea { id: fMouse; anchors.fill: parent; hoverEnabled: true; acceptedButtons: Qt.NoButton }
                     }
                     EmptyState {
                         anchors.fill: parent

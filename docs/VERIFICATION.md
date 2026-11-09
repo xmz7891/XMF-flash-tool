@@ -1,6 +1,6 @@
 # 验证记录
 
-版本：XMF Flash Tool v0.1.0
+版本：XMF Flash Tool v0.1.1
 环境：Windows 11 · Qt 6.8.3 · MinGW 13.1 · CMake 3.30 · C++20
 
 ## 1. 构建
@@ -140,3 +140,20 @@ powershell -NoProfile -ExecutionPolicy Bypass -File scripts\package.ps1 -BuildDi
 powershell -NoProfile -ExecutionPolicy Bypass -File scripts\verify_package.ps1
 powershell -NoProfile -ExecutionPolicy Bypass -File scripts\smoke_test.ps1
 ```
+
+
+## 10. 全项目审计（v0.1.1）
+
+对 19 个界面视图（11 个主页面 + 5 个内置模式 + Fastboot/Recovery/9008 工作台）做运行时审计：
+
+| 项目 | 结果 |
+| --- | --- |
+| QML 运行时警告 / TypeError | 0（修复了 ConsolePage 空设备 combo、PacketsPage Column 锚点、GuideFilePanel 未定义 radius、缺失图标等） |
+| 应用日志 `[error]` / `[warning]` | 最近 40 个日志文件 0 条（正常使用时） |
+| 幽灵点击区域 | 扫描全部 MouseArea，修掉 5 处只有 hover、却默认吞掉左键的列表行；任务卡取消按钮改为 20×20 可见热区 |
+| 死按钮 / 假按钮 | 扫描全部 AppButton / MenuItem，无空实现；设置页「检查更新」改为打开真实 Release 页面 |
+| 图标资源 | 扫描 C++ 工具 icon 与 QML IconImage 引用，补齐 8 个缺失 SVG |
+| 工具注册表 | 216 个工具，id 唯一、无空名称/分类、全部 runnable |
+| 单元测试 | 42 个测试类 0 失败 |
+| 环境自检 | 19 项通过，0 警告 0 失败 |
+| 最小窗口 | 1120×720 下刷机中心底部不再被状态栏遮挡；设置页可滚动 |

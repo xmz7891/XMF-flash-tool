@@ -1,5 +1,15 @@
 # 更新记录
 
+## v0.1.1
+
+* 修复 QML 运行时问题：ConsolePage 空设备 combo TypeError、PacketsPage Column 锚点警告、
+  GuideFilePanel 未定义 `Theme.r8`、缺失图标（stethoscope / package-open 等 8 个）。
+* 修复幽灵点击区域：列表行仅 hover 的 MouseArea 不再吞掉左键；任务卡取消按钮热区放大并加 hover 反馈。
+* Fastboot 分区读取复用同一次 `getvar all` 结果，避免重复查询慢速 bootloader。
+* 设置页「检查更新」改为打开真实 GitHub Release 页面。
+* 最小窗口（1120×720）下刷机中心底部不再被状态栏遮挡。
+* 全量审计：19 个界面视图 0 QML 警告、最近日志 0 error/warning、216 工具注册表一致。
+
 ## v0.1.0（分阶段开发汇总）
 
 ### 阶段 1：框架与界面

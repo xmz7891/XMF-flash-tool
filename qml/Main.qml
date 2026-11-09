@@ -510,7 +510,7 @@ Window {
             Rectangle {
                 anchors.fill: parent
                 color: Theme.darkMode ? "#99000000" : "#66000000"
-                MouseArea { anchors.fill: parent }
+                MouseArea { anchors.fill: parent; acceptedButtons: Qt.AllButtons }
             }
 
             Rectangle {

@@ -73,6 +73,7 @@ QtObject {
     readonly property int r12: 4
     readonly property int r10: 3
     readonly property int r6: 2
+    readonly property int r8: 2
     readonly property int pill: 4
     readonly property int pagePadding: 14
 

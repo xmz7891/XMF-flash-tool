@@ -62,13 +62,32 @@ Item {
                     elide: Text.ElideRight
                     width: parent.width - 60
                 }
-                MouseArea {
+                // Explicit 20x20 hit target with hover feedback, so the cancel
+                // button is never an invisible "ghost" area.
+                Item {
                     anchors.right: parent.right
                     anchors.bottom: parent.bottom
-                    width: 14; height: 14
-                    cursorShape: Qt.PointingHandCursor
-                    onClicked: App.cancelTask(modelData.id)
-                    IconImage { anchors.centerIn: parent; name: "x"; size: 9; tint: Theme.textMuted }
+                    anchors.margins: 3
+                    width: 20; height: 20
+
+                    Rectangle {
+                        anchors.fill: parent
+                        radius: Theme.r10
+                        color: cancelArea.containsMouse ? Theme.panelHover : "transparent"
+                    }
+                    IconImage {
+                        anchors.centerIn: parent
+                        name: "x"
+                        size: 11
+                        tint: cancelArea.containsMouse ? Theme.danger : Theme.textSub
+                    }
+                    MouseArea {
+                        id: cancelArea
+                        anchors.fill: parent
+                        hoverEnabled: true
+                        cursorShape: Qt.PointingHandCursor
+                        onClicked: App.cancelTask(modelData.id)
+                    }
                 }
             }
         }

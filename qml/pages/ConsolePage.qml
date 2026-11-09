@@ -99,7 +99,8 @@ Item {
                 model: page.devices()
                 textRole: "serial"
                 currentIndex: page.serial.length > 0 ? -1 : 0
-                onActivated: page.serial = String(model[index].serial || "")
+                onActivated: if (index >= 0 && index < model.length)
+                                 page.serial = String(model[index].serial || "")
                 font.pixelSize: 11
                 background: Rectangle {
                     radius: Theme.r10
@@ -110,7 +111,7 @@ Item {
                 indicator: IconImage { x: deviceCombo.width - 18; y: 7; name: "chevron-down"; size: 12; tint: Theme.textMuted }
                 contentItem: Text {
                     leftPadding: 6
-                    text: deviceCombo.currentIndex >= 0
+                    text: deviceCombo.count > 0 && deviceCombo.currentIndex >= 0
                           ? String(deviceCombo.model[deviceCombo.currentIndex].serial || "—")
                           : (page.serial.length > 0 ? page.serial : "自动选择")
                     color: Theme.text
