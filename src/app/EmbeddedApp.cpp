@@ -85,7 +85,7 @@ LaunchResult launchHidden(const QString& exe, const QStringList& arguments, cons
     STARTUPINFOW startup{};
     startup.cb = sizeof(startup);
     startup.dwFlags = STARTF_USESHOWWINDOW;
-    startup.wShowWindow = SW_SHOWMINNOACTIVE;
+    startup.wShowWindow = SW_SHOWNORMAL;
     PROCESS_INFORMATION process{};
 
     QString commandLine = QLatin1Char('"') + QDir::toNativeSeparators(exe) + QLatin1Char('"');
@@ -118,7 +118,7 @@ namespace gf {
 EmbeddedApp::EmbeddedApp(QObject* parent)
     : QObject(parent)
 {
-    m_pollTimer.setInterval(200);
+    m_pollTimer.setInterval(60);
     connect(&m_pollTimer, &QTimer::timeout, this, [this]() {
 #ifdef Q_OS_WIN
         if (!m_pid)

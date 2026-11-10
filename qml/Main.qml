@@ -475,7 +475,8 @@ Window {
                         Rectangle {
                             id: overlayBar
                             width: parent.width
-                            height: 30
+                            height: win.currentPage === "embedded" ? 0 : 30
+                            visible: height > 0
                             color: Theme.panelAlt
 
                             Row {
@@ -551,7 +552,7 @@ Window {
                             id: stack
                             x: 8
                             width: parent.width - 16
-                            height: parent.height - 30
+                            height: parent.height - overlayBar.height
                             pushEnter: Transition {
                                 ParallelAnimation {
                                     NumberAnimation { property: "x"; from: 30; to: 0; duration: Theme.animations ? 260 : 0; easing.type: Easing.OutQuint }

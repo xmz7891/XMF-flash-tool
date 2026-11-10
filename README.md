@@ -5,7 +5,7 @@
 
 ![main](docs/screenshots/main.png)
 
-[![Release](https://img.shields.io/badge/release-v0.1.3-blue)](https://github.com/xmz7891/XMF-flash-tool/releases)
+[![Release](https://img.shields.io/badge/release-v0.1.4-blue)](https://github.com/xmz7891/XMF-flash-tool/releases)
 [![Qt](https://img.shields.io/badge/Qt-6.8.3-green)](https://www.qt.io/)
 [![C++](https://img.shields.io/badge/C%2B%2B-20-orange)]()
 [![Platform](https://img.shields.io/badge/platform-Windows%2010%20%2F%2011-lightgrey)]()
@@ -112,10 +112,10 @@ XMF Flash Tool 使用 **C++20 + Qt 6.8** 编写，主界面是一块**单屏刷�
 
 从 [Releases](https://github.com/xmz7891/XMF-flash-tool/releases) 下载：
 
-- `XMF-Flash-Tool-Setup-0.1.3.exe` —— Inno Setup 安装包（默认按当前用户安装，可选桌面快捷方式）
-- `XMF-Flash-Tool-v0.1.3-full.zip` —— 完整便携版（含驱动、平台工具、引导包）
-- `XMF-Flash-Tool-v0.1.3-lite.zip` —— 精简版（仅程序 + Qt 运行库）
-- `XMF-Flash-Tool-v0.1.3-source.zip` —— 源码快照（GitHub 也会自动生成 Source code）
+- `XMF-Flash-Tool-Setup-0.1.4.exe` —— Inno Setup 安装包（默认按当前用户安装，可选桌面快捷方式）
+- `XMF-Flash-Tool-v0.1.4-full.zip` —— 完整便携版（含驱动、平台工具、引导包）
+- `XMF-Flash-Tool-v0.1.4-lite.zip` —— 精简版（仅程序 + Qt 运行库）
+- `XMF-Flash-Tool-v0.1.4-source.zip` —— 源码快照（GitHub 也会自动生成 Source code）
 
 ### 方式二：源码构建
 

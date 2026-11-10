@@ -13,6 +13,7 @@ Item {
     property string toolExe: ""
     property string toolDir: ""
     property bool started: false
+    property bool showBack: true
 
     signal backRequested()
 
@@ -20,12 +21,40 @@ Item {
         return nativeHost.mapToItem(null, 0, 0)
     }
 
+    function resolveTool() {
+        const tools = App.officialTools.tools
+        for (let i = 0; i < tools.length; ++i) {
+            if (tools[i].id === page.toolId) {
+                page.toolName = tools[i].name
+                page.toolExe = tools[i].path
+                page.toolDir = tools[i].dir
+                return true
+            }
+        }
+        return false
+    }
+
+    function prepareAndLaunch() {
+        if (page.toolId === "")
+            return
+        if (!resolveTool() || page.toolExe === "") {
+            App.notify("error", "找不到官方工具：" + page.toolId)
+            return
+        }
+        if (!launchTimer.running)
+            launchTimer.start()
+    }
+
     function launch() {
+        if (page.toolExe === "") {
+            App.notify("error", "找不到官方工具：" + page.toolId)
+            return
+        }
         const area = hostRect()
-        started = App.embedded.start(toolExe, [], toolDir,
-                                     Math.round(area.x), Math.round(area.y),
-                                     Math.round(nativeHost.width), Math.round(nativeHost.height))
-        if (!started)
+        page.started = App.embedded.start(page.toolExe, [], page.toolDir,
+                                          Math.round(area.x), Math.round(area.y),
+                                          Math.round(nativeHost.width), Math.round(nativeHost.height))
+        if (!page.started)
             App.notify("error", "启动失败：" + App.embedded.error)
     }
 
@@ -35,17 +64,15 @@ Item {
                                 Math.round(nativeHost.width), Math.round(nativeHost.height))
     }
 
-    Component.onCompleted: {
-        const tools = App.officialTools.tools
-        for (let i = 0; i < tools.length; ++i) {
-            if (tools[i].id === toolId) {
-                toolName = tools[i].name
-                toolExe = tools[i].path
-                toolDir = tools[i].dir
-                break
-            }
-        }
-        Qt.callLater(launch)
+    // toolId is injected by PageHost after the component is created, so start
+    // the vendor app from onToolIdChanged as well as onCompleted.
+    onToolIdChanged: page.prepareAndLaunch()
+    Component.onCompleted: page.prepareAndLaunch()
+
+    Timer {
+        id: launchTimer
+        interval: Theme.animations ? 240 : 0
+        onTriggered: page.launch()
     }
     Component.onDestruction: App.embedded.close()
 
@@ -60,6 +87,7 @@ Item {
             spacing: 12
 
             AppButton {
+                visible: page.showBack
                 text: "返回"
                 icon: "arrow-left"
                 kind: 2
@@ -140,8 +168,8 @@ Item {
             id: frame
             width: parent.width
             height: parent.height - 76
-            radius: Theme.r14
-            color: Theme.darkMode ? "#0A0A0C" : "#EFEFF2"
+            radius: 0
+            color: Theme.darkMode ? "#0A0A0C" : Theme.panelAlt
             border.color: Theme.border
             clip: true
 

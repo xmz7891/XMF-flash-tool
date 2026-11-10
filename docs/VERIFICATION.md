@@ -1,6 +1,6 @@
 # 验证记录
 
-版本：XMF Flash Tool v0.1.3
+版本：XMF Flash Tool v0.1.4
 环境：Windows 11 · Qt 6.8.3 · MinGW 13.1 · CMake 3.30 · C++20
 
 ## 1. 构建
@@ -219,3 +219,14 @@ powershell -NoProfile -ExecutionPolicy Bypass -File scripts\smoke_test.ps1
 - 最小窗口 1040×680 布局保持
 - 单元测试 42 类通过
 - 随包校验 9 checks、UI 冒烟 15 pages 通过
+
+
+## 13. v0.1.4：内置官方工具启动修复
+
+| 问题 | 根因 | 修复 |
+| --- | --- | --- |
+| 点击"内置启动"提示"启动失败：找不到工具：" | PageHost 在页面创建后才注入 toolId，EmbeddedToolPage 在 Component.onCompleted 读取到空 id/空路径 | 增加 onToolIdChanged 延迟解析与启动；toolExe 为空时明确提示具体工具 id |
+| 官方工具以独立窗口出现 | 厂商窗口接管轮询 200ms，启动后短暂以顶层窗口可见 | 轮询降到 60ms；仍保留"独立窗口"显式按钮 |
+| 内置工具页像新窗口 | 共享上下文栏 + 页面自己的返回/标题栏重复 | currentPage 为 embedded 时隐藏共享栏，仅保留工作台标题栏；去掉重复返回按钮，预览区改扁平边框 |
+
+验证：`--embed miflash` 状态显示"已内嵌运行 · MiFlash 2020.3.14.0"；11 入口 0 QML 错误。
