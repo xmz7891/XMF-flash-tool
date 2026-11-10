@@ -57,14 +57,18 @@ private:
     void adoptExtraWindows();
     void applyGeometry();
     void measureChild();
+    void updateDimOverlay();
     void setError(const QString& error);
     qintptr ourHwnd() const;
 
     QPointer<QWindow> m_window;
     qint64 m_pid = 0;
     qintptr m_childHwnd = 0;
+    qintptr m_dimHwnd = 0;
     bool m_embedded = false;
     bool m_embeddedHidden = false;
+    bool m_nativeSizeValid = false;
+    bool m_foreignProcess = false;
     QString m_title;
     QString m_error;
     int m_childWidth = 0;

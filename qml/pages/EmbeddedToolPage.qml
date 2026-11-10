@@ -167,9 +167,10 @@ Item {
         GlassSurface {
             id: frame
             width: parent.width
-            height: parent.height - 76
+            height: parent.height - 88
             radius: 0
-            color: Theme.darkMode ? "#0A0A0C" : Theme.panelAlt
+            color: Theme.darkMode ? "#0A0A0C" : "#1B1916"
+            border.width: 0
             border.color: Theme.border
             clip: true
 
@@ -179,10 +180,10 @@ Item {
                 // and cannot fill it, centre a correctly sized host instead of
                 // cropping the vendor window.
                 width: App.embedded.childSizeValid
-                       ? Math.min(frame.width - 24, Math.max(640, App.embedded.childWidth))
+                       ? Math.min(frame.width - 2, Math.max(360, App.embedded.childWidth))
                        : frame.width - 2
                 height: App.embedded.childSizeValid
-                        ? Math.min(frame.height - 24, Math.max(420, App.embedded.childHeight))
+                        ? Math.min(frame.height - 2, Math.max(240, App.embedded.childHeight))
                         : frame.height - 2
                 anchors.centerIn: parent
 

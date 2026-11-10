@@ -9,8 +9,40 @@
 #ifdef Q_OS_WIN
 #include <windows.h>
 #include <winuser.h>
+#include <tlhelp32.h>
 
 namespace {
+bool isProcessInTree(DWORD pid, DWORD root)
+{
+    if (pid == root)
+        return true;
+    HANDLE snapshot = CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, 0);
+    if (snapshot == INVALID_HANDLE_VALUE)
+        return false;
+    PROCESSENTRY32W entry{};
+    entry.dwSize = sizeof(entry);
+    DWORD current = pid;
+    bool found = false;
+    for (int depth = 0; depth < 16 && current && !found; ++depth) {
+        if (current == root) {
+            found = true;
+            break;
+        }
+        DWORD parent = 0;
+        if (!Process32FirstW(snapshot, &entry))
+            break;
+        do {
+            if (entry.th32ProcessID == current) {
+                parent = entry.th32ParentProcessID;
+                break;
+            }
+        } while (Process32NextW(snapshot, &entry));
+        current = parent;
+    }
+    CloseHandle(snapshot);
+    return found;
+}
+
 struct WindowSearch {
     DWORD pid = 0;
     HWND best = nullptr;
@@ -22,9 +54,7 @@ BOOL CALLBACK enumWindowsProc(HWND hwnd, LPARAM param)
     auto* search = reinterpret_cast<WindowSearch*>(param);
     DWORD windowPid = 0;
     GetWindowThreadProcessId(hwnd, &windowPid);
-    if (windowPid != search->pid)
-        return TRUE;
-    if (GetWindow(hwnd, GW_OWNER) != nullptr)
+    if (!isProcessInTree(windowPid, search->pid))
         return TRUE;
     if (GetWindowLongW(hwnd, GWL_EXSTYLE) & WS_EX_TOOLWINDOW)
         return TRUE;
@@ -66,6 +96,42 @@ BOOL CALLBACK enumWindowsProc(HWND hwnd, LPARAM param)
     return TRUE;
 }
 
+qint64 findProcessByExe(const QString& exePath)
+{
+    // Debug and packaged builds can hold the same vendor tool under different
+    // data roots, so match by executable name instead of the full path.
+    const QString wanted = QFileInfo(exePath).fileName().toLower();
+    if (wanted.isEmpty())
+        return 0;
+    HANDLE snapshot = CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, 0);
+    if (snapshot == INVALID_HANDLE_VALUE)
+        return 0;
+    PROCESSENTRY32W entry{};
+    entry.dwSize = sizeof(entry);
+    qint64 found = 0;
+    if (Process32FirstW(snapshot, &entry)) {
+        do {
+            if (entry.th32ProcessID == GetCurrentProcessId())
+                continue;
+            HANDLE process = OpenProcess(PROCESS_QUERY_LIMITED_INFORMATION, FALSE, entry.th32ProcessID);
+            if (!process)
+                continue;
+            wchar_t path[1024] = {0};
+            DWORD size = 1024;
+            if (QueryFullProcessImageNameW(process, 0, path, &size)) {
+                const QString candidate = QFileInfo(QString::fromWCharArray(path)).fileName().toLower();
+                if (candidate == wanted)
+                    found = qint64(entry.th32ProcessID);
+            }
+            CloseHandle(process);
+            if (found)
+                break;
+        } while (Process32NextW(snapshot, &entry));
+    }
+    CloseHandle(snapshot);
+    return found;
+}
+
 HWND findTopWindow(DWORD pid)
 {
     WindowSearch search;
@@ -85,7 +151,7 @@ LaunchResult launchHidden(const QString& exe, const QStringList& arguments, cons
     STARTUPINFOW startup{};
     startup.cb = sizeof(startup);
     startup.dwFlags = STARTF_USESHOWWINDOW;
-    startup.wShowWindow = SW_SHOWNORMAL;
+    startup.wShowWindow = SW_SHOWMINNOACTIVE;
     PROCESS_INFORMATION process{};
 
     QString commandLine = QLatin1Char('"') + QDir::toNativeSeparators(exe) + QLatin1Char('"');
@@ -126,8 +192,27 @@ EmbeddedApp::EmbeddedApp(QObject* parent)
         const HWND hwnd = findTopWindow(DWORD(m_pid));
         if (!hwnd)
             return;
-        m_pollTimer.stop();
-        adoptWindow(qintptr(hwnd));
+        if (!m_embedded) {
+            m_pollTimer.setInterval(500);
+            adoptWindow(qintptr(hwnd));
+            return;
+        }
+        // A late-created main window (or a larger window replacing a splash)
+        // must be adopted too, otherwise it stays as a separate top-level window.
+        if (qintptr(hwnd) == m_childHwnd)
+            return;
+        RECT candidate{};
+        RECT current{};
+        if (!GetWindowRect(hwnd, &candidate) || !GetClientRect(reinterpret_cast<HWND>(m_childHwnd), &current))
+            return;
+        const qint64 candidateArea = qint64(candidate.right - candidate.left) * (candidate.bottom - candidate.top);
+        const qint64 currentArea = qint64(current.right - current.left) * (current.bottom - current.top);
+        if (candidateArea > currentArea * 12 / 10) {
+            const qintptr oldChild = m_childHwnd;
+            adoptWindow(qintptr(hwnd));
+            if (oldChild && oldChild != m_childHwnd)
+                ShowWindow(reinterpret_cast<HWND>(oldChild), SW_HIDE);
+        }
 #endif
     });
 
@@ -174,6 +259,7 @@ bool EmbeddedApp::start(const QString& exePath, const QStringList& arguments, co
     m_title.clear();
     m_childWidth = 0;
     m_childHeight = 0;
+    m_nativeSizeValid = false;
     m_areaX = x;
     m_areaY = y;
     m_areaW = w;
@@ -186,6 +272,24 @@ bool EmbeddedApp::start(const QString& exePath, const QStringList& arguments, co
 
     qint64 pid = 0;
 #ifdef Q_OS_WIN
+    // Vendor tools are usually single-instance. A stale instance would either
+    // forward our launch to it (leaving a separate window) or refuse to embed,
+    // so close the old one and start a fresh, hidden process that we can adopt.
+    const qint64 existingPid = findProcessByExe(exePath);
+    if (existingPid > 0) {
+        const HANDLE stale = OpenProcess(PROCESS_TERMINATE | SYNCHRONIZE, FALSE, DWORD(existingPid));
+        if (stale) {
+            TerminateProcess(stale, 0);
+            WaitForSingleObject(stale, 1500);
+            CloseHandle(stale);
+        }
+        for (int i = 0; i < 30; ++i) {
+            if (findProcessByExe(exePath) == 0)
+                break;
+            QThread::msleep(100);
+        }
+        QThread::msleep(200);
+    }
     const LaunchResult launched = launchHidden(exePath, arguments, workingDir);
     if (launched.ok)
         pid = launched.pid;
@@ -225,6 +329,17 @@ void EmbeddedApp::adoptWindow(qintptr handle)
     GetWindowTextW(child, titleBuf, 511);
     m_title = QString::fromWCharArray(titleBuf);
 
+    // Remember the vendor window's own size before we resize it. Feeding the
+    // resized client size back into QML made fixed-layout tools (SP Flash)
+    // grow a large white canvas around their UI.
+    RECT initialRect{};
+    if (GetWindowRect(child, &initialRect)) {
+        const qreal dpr = m_window ? m_window->devicePixelRatio() : 1.0;
+        m_childWidth = qMax(360, int((initialRect.right - initialRect.left) / dpr));
+        m_childHeight = qMax(240, int((initialRect.bottom - initialRect.top) / dpr));
+        m_nativeSizeValid = true;
+    }
+
     LONG_PTR style = GetWindowLongPtrW(child, GWL_STYLE);
     style &= ~(WS_POPUP | WS_CAPTION | WS_THICKFRAME | WS_MINIMIZEBOX | WS_MAXIMIZEBOX | WS_SYSMENU
                | WS_OVERLAPPED);
@@ -252,7 +367,6 @@ void EmbeddedApp::adoptWindow(qintptr handle)
     m_extraTimer.start();
     QTimer::singleShot(3000, this, [this]() {
         m_settleTimer.stop();
-        m_extraTimer.stop();
         adoptExtraWindows();
         measureChild();
     });
@@ -286,11 +400,13 @@ void EmbeddedApp::adoptExtraWindows()
             auto* c = reinterpret_cast<Ctx*>(param);
             DWORD pid = 0;
             GetWindowThreadProcessId(hwnd, &pid);
-            if (pid != c->pid || hwnd == c->main)
+            if (!isProcessInTree(pid, c->pid) || hwnd == c->main)
                 return TRUE;
             if (GetWindowLongW(hwnd, GWL_EXSTYLE) & WS_EX_TOOLWINDOW)
                 return TRUE;
             if (GetParent(hwnd) == c->parent)
+                return TRUE;
+            if (!IsWindowVisible(hwnd))
                 return TRUE;
             RECT rect{};
             if (!GetWindowRect(hwnd, &rect))
@@ -299,6 +415,21 @@ void EmbeddedApp::adoptExtraWindows()
             const int h = rect.bottom - rect.top;
             if (w < 80 || h < 40)
                 return TRUE;
+
+            // Only pull real dialogs into the frame. Small ownerless helper
+            // overlays (splash/scroll/IME windows) cause black rectangles at
+            // the window edges when reparented, so hide them instead.
+            wchar_t classBuf[128] = {0};
+            GetClassNameW(hwnd, classBuf, 127);
+            wchar_t titleBuf[256] = {0};
+            GetWindowTextW(hwnd, titleBuf, 255);
+            const bool isDialog = QString::fromWCharArray(classBuf).compare(QStringLiteral("#32770"), Qt::CaseInsensitive) == 0
+                                  || GetWindow(hwnd, GW_OWNER) != nullptr;
+            const bool isMainLike = titleBuf[0] != 0 && w >= 300 && h >= 200;
+            if (!isDialog && !isMainLike) {
+                ShowWindow(hwnd, SW_HIDE);
+                return TRUE;
+            }
 
             LONG_PTR style = GetWindowLongPtrW(hwnd, GWL_STYLE);
             style &= ~(WS_POPUP | WS_CAPTION | WS_THICKFRAME | WS_MINIMIZEBOX | WS_MAXIMIZEBOX | WS_SYSMENU
@@ -322,6 +453,59 @@ void EmbeddedApp::adoptExtraWindows()
             return TRUE;
         },
         reinterpret_cast<LPARAM>(&ctx));
+
+    // Anything still visible outside our frame would look like a "new window".
+    // Hide leftovers from the same process tree after the real dialogs were adopted.
+    struct HideCtx {
+        DWORD pid;
+        HWND parent;
+        HWND main;
+        QList<qintptr>* adopted;
+    } hideCtx{DWORD(m_pid), parent, mainWindow, &m_extraWindows};
+    EnumWindows(
+        [](HWND hwnd, LPARAM param) -> BOOL {
+            auto* hc = reinterpret_cast<HideCtx*>(param);
+            DWORD pid = 0;
+            GetWindowThreadProcessId(hwnd, &pid);
+            if (!isProcessInTree(pid, hc->pid) || hwnd == hc->main || hwnd == hc->parent)
+                return TRUE;
+            if (!IsWindowVisible(hwnd))
+                return TRUE;
+            if (hc->adopted->contains(qintptr(hwnd)))
+                return TRUE;
+            if (GetParent(hwnd) == hc->parent)
+                return TRUE;
+            ShowWindow(hwnd, SW_HIDE);
+            return TRUE;
+        },
+        reinterpret_cast<LPARAM>(&hideCtx));
+#endif
+}
+
+void EmbeddedApp::updateDimOverlay()
+{
+#ifdef Q_OS_WIN
+    if (!m_embedded || !m_childHwnd || !m_window) {
+        if (m_dimHwnd) {
+            DestroyWindow(reinterpret_cast<HWND>(m_dimHwnd));
+            m_dimHwnd = 0;
+        }
+        return;
+    }
+    if (!m_dimHwnd) {
+        m_dimHwnd = qintptr(CreateWindowExW(
+            WS_EX_LAYERED | WS_EX_TRANSPARENT | WS_EX_NOACTIVATE | WS_EX_TOOLWINDOW,
+            L"STATIC", nullptr, WS_POPUP | SS_BLACKRECT, 0, 0, 1, 1,
+            reinterpret_cast<HWND>(ourHwnd()), nullptr, nullptr, nullptr));
+        if (!m_dimHwnd)
+            return;
+        SetLayeredWindowAttributes(reinterpret_cast<HWND>(m_dimHwnd), 0, 70, LWA_ALPHA);
+    }
+    POINT origin{int(m_areaX), int(m_areaY)};
+    ClientToScreen(reinterpret_cast<HWND>(ourHwnd()), &origin);
+    SetWindowPos(reinterpret_cast<HWND>(m_dimHwnd), HWND_TOP,
+                 origin.x, origin.y, int(m_areaW), int(m_areaH),
+                 SWP_NOACTIVATE | SWP_SHOWWINDOW);
 #endif
 }
 
@@ -339,13 +523,14 @@ void EmbeddedApp::applyGeometry()
         return;
     SetWindowPos(reinterpret_cast<HWND>(m_childHwnd), HWND_TOP, x, y, w, h,
                  SWP_NOACTIVATE | SWP_SHOWWINDOW | SWP_FRAMECHANGED);
+    updateDimOverlay();
 #endif
 }
 
 void EmbeddedApp::measureChild()
 {
 #ifdef Q_OS_WIN
-    if (!m_embedded || !m_childHwnd)
+    if (!m_embedded || !m_childHwnd || m_nativeSizeValid)
         return;
     RECT rect{};
     if (!GetClientRect(reinterpret_cast<HWND>(m_childHwnd), &rect))
@@ -418,6 +603,31 @@ void EmbeddedApp::close()
     m_settleTimer.stop();
     m_pollTimer.stop();
     m_extraTimer.stop();
+    if (m_dimHwnd) {
+        DestroyWindow(reinterpret_cast<HWND>(m_dimHwnd));
+        m_dimHwnd = 0;
+    }
+    if (m_foreignProcess) {
+        if (child) {
+            SetParent(child, nullptr);
+            LONG_PTR style = GetWindowLongPtrW(child, GWL_STYLE);
+            style &= ~WS_CHILD;
+            style |= WS_OVERLAPPEDWINDOW | WS_VISIBLE;
+            SetWindowLongPtrW(child, GWL_STYLE, style);
+            SetWindowPos(child, nullptr, 80, 80, 1024, 700, SWP_FRAMECHANGED | SWP_SHOWWINDOW);
+        }
+        m_extraWindows.clear();
+        m_childHwnd = 0;
+        m_embedded = false;
+        m_pid = 0;
+        m_foreignProcess = false;
+        m_childWidth = 0;
+        m_childHeight = 0;
+        m_nativeSizeValid = false;
+        emit stateChanged();
+        emit childSizeChanged();
+        return;
+    }
     for (const qintptr handle : m_extraWindows) {
 #ifdef Q_OS_WIN
         HWND child = reinterpret_cast<HWND>(handle);
@@ -438,6 +648,7 @@ void EmbeddedApp::close()
     m_title.clear();
     m_childWidth = 0;
     m_childHeight = 0;
+    m_nativeSizeValid = false;
     emit stateChanged();
     emit childSizeChanged();
 }
