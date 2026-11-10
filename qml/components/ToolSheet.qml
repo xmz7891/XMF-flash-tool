@@ -69,6 +69,8 @@ Item {
         anchors.fill: parent
         color: Theme.darkMode ? "#99000000" : "#66000000"
         visible: sheet.visible
+        opacity: sheet.visible ? 1 : 0
+        Behavior on opacity { NumberAnimation { duration: Theme.durFast } }
         MouseArea { anchors.fill: parent; onClicked: sheet.close() }
     }
 
@@ -78,6 +80,10 @@ Item {
         anchors.centerIn: parent
         visible: sheet.visible
         radius: Theme.r14
+        opacity: sheet.visible ? 1 : 0
+        scale: sheet.visible ? 1 : 0.965
+        Behavior on opacity { NumberAnimation { duration: Theme.durNormal; easing.type: Easing.OutCubic } }
+        Behavior on scale { NumberAnimation { duration: Theme.durNormal; easing.type: Easing.OutBack } }
         color: Theme.panel
         border.width: 1
         border.color: Theme.borderStrong

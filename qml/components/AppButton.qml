@@ -11,11 +11,15 @@ Item {
     property bool small: false
     property bool busy: false
     property bool enabled: true
+    property bool onDark: false
     signal clicked()
 
     implicitHeight: small ? 26 : 30
     implicitWidth: row.implicitWidth + (small ? 22 : 30)
     opacity: enabled ? 1 : 0.45
+    scale: mouse.pressed && enabled ? 0.965 : (mouse.containsMouse && enabled ? 1.012 : 1.0)
+    transformOrigin: Item.Center
+    Behavior on scale { NumberAnimation { duration: Theme.durFast; easing.type: Easing.OutCubic } }
 
     Rectangle {
         id: bg
@@ -27,13 +31,15 @@ Item {
             if (root.kind === 3)
                 return mouse.containsMouse ? Theme.alpha(Theme.danger, 0.14) : Theme.panel
             if (root.kind === 2)
-                return mouse.containsMouse ? Theme.panelHover : "transparent"
+                return mouse.containsMouse ? (root.onDark ? "#3B372E" : Theme.panelHover) : "transparent"
+            if (root.onDark)
+                return mouse.containsMouse ? "#3B372E" : "transparent"
             return mouse.containsMouse ? (mouse.pressed ? Theme.panelAlt : Theme.panelHover) : Theme.panel
         }
-        border.width: root.kind === 2 ? 0 : 1
+        border.width: root.kind === 2 || root.onDark ? 0 : 1
         border.color: root.kind === 3 ? Theme.alpha(Theme.danger, 0.55)
                       : (root.kind === 0 ? Theme.accentHover : Theme.borderStrong)
-        Behavior on color { ColorAnimation { duration: Theme.durFast } }
+        Behavior on color { ColorAnimation { duration: Theme.durFast; easing.type: Easing.OutCubic } }
     }
 
     Row {
@@ -44,13 +50,15 @@ Item {
             visible: root.icon !== ""
             name: root.icon
             size: root.small ? 13 : 14
-            tint: root.kind === 0 ? Theme.textOnAccent : (root.kind === 3 ? Theme.danger : Theme.textSub)
+            tint: root.kind === 0 ? Theme.textOnAccent
+                  : (root.kind === 3 ? Theme.danger : (root.onDark ? Theme.sectionText : Theme.textSub))
             anchors.verticalCenter: parent.verticalCenter
         }
         Text {
             visible: root.text !== ""
             text: root.busy ? "执行中…" : root.text
-            color: root.kind === 0 ? Theme.textOnAccent : (root.kind === 3 ? Theme.danger : Theme.text)
+            color: root.kind === 0 ? Theme.textOnAccent
+                   : (root.kind === 3 ? Theme.danger : (root.onDark ? Theme.sectionText : Theme.text))
             font.pixelSize: root.small ? 12 : 13
             font.weight: root.kind === 0 ? Font.DemiBold : Font.Normal
             anchors.verticalCenter: parent.verticalCenter

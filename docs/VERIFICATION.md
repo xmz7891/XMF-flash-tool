@@ -1,6 +1,6 @@
 # 验证记录
 
-版本：XMF Flash Tool v0.1.2
+版本：XMF Flash Tool v0.1.3
 环境：Windows 11 · Qt 6.8.3 · MinGW 13.1 · CMake 3.30 · C++20
 
 ## 1. 构建
@@ -193,3 +193,29 @@ powershell -NoProfile -ExecutionPolicy Bypass -File scripts\smoke_test.ps1
 | 首次启动 | 1180×760 居中，免责声明完整展示 |
 | 安装包 | `XMF-Flash-Tool-Setup-0.1.2.exe` 构建通过（264.9 MB） |
 | 截图 | README 10 张截图按新 UI 重新生成 |
+
+
+## 12. v0.1.3：全局动效与界面去模板化
+
+### 动效系统
+
+| 对象 | 动画 |
+| --- | --- |
+| 页面切换 | 260ms OutQuint 横向滑入 + 旧页视差退场，不透明 PageHost 避免透明叠影 |
+| 返回 | 240ms 反向滑入；上下文栏常驻，不再改变高度 |
+| 启动 | 窗口 240ms 淡入 |
+| 按钮 | 按下 scale 0.965 / 悬停 1.012，110ms OutCubic |
+| 开关 | SpringAnimation（spring 4.8 / damping 0.34） |
+| 复选框 | 填充、边框、对勾弹性出现 |
+| 图标轨 | 选中底色渐变、悬停图标 1.10 缩放 |
+| 行 / 进度 | hover 颜色过渡、进度条宽度 180ms 过渡 |
+| 弹窗 / Toast | 缩放淡入、遮罩淡入、Toast 淡入 |
+| 设置开关 | 关闭界面动画后全部时长为 0 |
+
+### 验证
+
+- 11 个入口启动截图，0 QML 运行时错误
+- 页面切换中间帧检查：无透明叠影，新页以不透明背景滑入
+- 最小窗口 1040×680 布局保持
+- 单元测试 42 类通过
+- 随包校验 9 checks、UI 冒烟 15 pages 通过

@@ -5,7 +5,7 @@ import XMF
 // light title text and an optional right-hand hint. Sharp 3px corners.
 Rectangle {
     id: root
-    radius: Theme.r14
+    radius: Theme.r8
     color: Theme.panel
     border.width: 1
     border.color: Theme.border
@@ -14,10 +14,10 @@ Rectangle {
     property bool hovered: false
     property alias title: titleText.text
     property string hint: ""
-    property bool darkHeader: true
+    property bool darkHeader: false
     property color accentColor: Theme.accent
     property real highlight: 0.0
-    property int titleHeight: 34
+    property int titleHeight: 30
     default property alias contentData: body.data
 
     Behavior on color {
@@ -52,12 +52,12 @@ Rectangle {
         }
 
         Rectangle {
+            visible: root.darkHeader
             anchors.left: parent.left
             anchors.leftMargin: 10
             anchors.verticalCenter: parent.verticalCenter
-            width: 4
-            height: 15
-            radius: 1
+            width: 3
+            height: 14
             color: root.accentColor
         }
 
@@ -78,13 +78,13 @@ Rectangle {
         Text {
             id: titleText
             anchors.left: parent.left
-            anchors.leftMargin: 22
+            anchors.leftMargin: 12
             anchors.verticalCenter: parent.verticalCenter
             width: Math.max(40, parent.width - anchors.leftMargin - 14
                             - (hintText.visible ? hintText.width + 10 : 0))
             text: root.title
             color: root.darkHeader ? Theme.sectionText : Theme.text
-            font.pixelSize: 13
+            font.pixelSize: 12
             font.weight: Font.DemiBold
             elide: Text.ElideRight
         }

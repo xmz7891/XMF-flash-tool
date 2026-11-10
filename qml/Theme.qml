@@ -11,9 +11,9 @@ QtObject {
 
     // ---- motion -----------------------------------------------------------
     property bool animations: true
-    readonly property int durFast: animations ? 90 : 0
-    readonly property int durNormal: animations ? 140 : 0
-    readonly property int durSlow: animations ? 200 : 0
+    readonly property int durFast: animations ? 110 : 0
+    readonly property int durNormal: animations ? 180 : 0
+    readonly property int durSlow: animations ? 260 : 0
     readonly property int easing: Easing.OutCubic
     readonly property int spring: Easing.OutCubic
 

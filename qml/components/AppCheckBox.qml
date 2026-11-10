@@ -18,6 +18,8 @@ CheckBox {
         color: root.checked ? Theme.accent : "transparent"
         border.width: 1
         border.color: root.checked ? Theme.accent : Theme.borderStrong
+        Behavior on color { ColorAnimation { duration: Theme.durFast; easing.type: Easing.OutCubic } }
+        Behavior on border.color { ColorAnimation { duration: Theme.durFast; easing.type: Easing.OutCubic } }
 
         IconImage {
             anchors.centerIn: parent
@@ -25,6 +27,10 @@ CheckBox {
             name: "check"
             size: 10
             tint: Theme.textOnAccent
+            opacity: root.checked ? 1 : 0
+            scale: root.checked ? 1 : 0.5
+            Behavior on opacity { NumberAnimation { duration: Theme.durFast } }
+            Behavior on scale { NumberAnimation { duration: Theme.durFast; easing.type: Easing.OutBack } }
         }
     }
 

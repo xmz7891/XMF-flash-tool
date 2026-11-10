@@ -141,12 +141,13 @@ Item {
         Row {
             width: parent.width
             height: parent.height - 220
-            spacing: 6
+            spacing: 0
 
             // ------------------------------------------------ partition area
             GlassSurface {
                 width: parent.width - 336
                 height: parent.height
+                radius: 0
                 title: "分区表"
                 hint: page.rows.length > 0 ? page.rows.length + " 个分区 · " + page.selectedRows.length + " 已选" : "未读取"
 
@@ -217,6 +218,19 @@ Item {
                     Item {
                         width: parent.width
                         height: parent.height - 66
+
+                        Column {
+                            visible: page.rows.length === 0
+                            width: parent.width
+                            Repeater {
+                                model: 12
+                                delegate: Rectangle {
+                                    width: parent ? parent.width : 0
+                                    height: 26
+                                    color: index % 2 === 1 ? Theme.alpha(Theme.panelAlt, 0.35) : "transparent"
+                                }
+                            }
+                        }
 
                         ListView {
                             anchors.fill: parent
@@ -300,14 +314,43 @@ Item {
                             }
                         }
 
-                        EmptyState {
-                            anchors.fill: parent
+                        Row {
                             visible: page.rows.length === 0
-                            icon: "hard-drive"
-                            title: "尚未读取分区表"
-                            text: "连接 Fastboot / ADB 设备后点「读分区表」，或从固件/镜像拖入本页。"
-                            actionText: "读分区表"
-                            onAction: page.readPartitions()
+                            anchors.left: parent.left
+                            anchors.right: parent.right
+                            anchors.top: parent.top
+                            anchors.topMargin: 10
+                            spacing: 10
+
+                            IconImage {
+                                name: "usb"
+                                size: 16
+                                tint: Theme.textMuted
+                                anchors.verticalCenter: parent.verticalCenter
+                            }
+                            Column {
+                                spacing: 1
+                                anchors.verticalCenter: parent.verticalCenter
+                                Text {
+                                    text: "未读取分区表"
+                                    color: Theme.text
+                                    font.pixelSize: 12
+                                    font.weight: Font.DemiBold
+                                }
+                                Text {
+                                    text: "连接 Fastboot 或开启 ADB 调试后读取；也可把固件 / 镜像拖入本页。"
+                                    color: Theme.textMuted
+                                    font.pixelSize: 10
+                                }
+                            }
+                            Item { width: Math.max(0, parent.width - 620); height: 1 }
+                            AppButton {
+                                text: "读分区表"
+                                kind: 1
+                                small: true
+                                anchors.verticalCenter: parent.verticalCenter
+                                onClicked: page.readPartitions()
+                            }
                         }
                     }
                 }
@@ -317,6 +360,7 @@ Item {
             GlassSurface {
                 width: 330
                 height: parent.height
+                radius: 0
                 title: "执行日志"
                 hint: logList.count + " 条"
 
@@ -515,6 +559,7 @@ Item {
                     width: page.activeTask ? parent.width * page.activeTask.progress / 100 : 0
                     height: parent.height
                     color: Theme.accent
+                    Behavior on width { NumberAnimation { duration: Theme.durNormal; easing.type: Easing.OutCubic } }
                 }
             }
             Text {

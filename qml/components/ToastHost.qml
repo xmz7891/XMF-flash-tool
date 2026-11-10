@@ -44,6 +44,17 @@ Item {
                 color: Theme.darkMode ? "#F22A2A2D" : "#F2FFFFFF"
                 border.width: 1
                 border.color: Theme.border
+                opacity: 0
+                Component.onCompleted: { fadeIn.start(); lifetime.start() }
+                NumberAnimation {
+                    id: fadeIn
+                    target: toast
+                    property: "opacity"
+                    from: 0
+                    to: 1
+                    duration: Theme.durNormal
+                    easing.type: Easing.OutCubic
+                }
 
                 Row {
                     anchors.fill: parent
@@ -67,7 +78,6 @@ Item {
                     }
                 }
 
-                Component.onCompleted: lifetime.start()
                 Timer {
                     id: lifetime
                     interval: 2400

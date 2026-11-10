@@ -85,6 +85,7 @@ Item {
                         height: 2
                         color: Theme.accent
                         visible: page.category === modelData.id
+                        Behavior on color { ColorAnimation { duration: Theme.durFast } }
                     }
                     Text {
                         id: tabText

@@ -13,6 +13,7 @@ Item {
     Rectangle {
         anchors.fill: parent
         color: mouse.containsMouse ? Theme.panelHover : (index % 2 === 1 ? Theme.panelAlt : "transparent")
+        Behavior on color { ColorAnimation { duration: Theme.durFast; easing.type: Easing.OutCubic } }
     }
 
     Row {
@@ -26,6 +27,9 @@ Item {
             name: root.toolData.icon || "tool"
             size: 14
             tint: mouse.containsMouse ? Theme.accent : Theme.textSub
+            scale: mouse.containsMouse ? 1.12 : 1.0
+            Behavior on scale { NumberAnimation { duration: Theme.durFast; easing.type: Easing.OutCubic } }
+            Behavior on tint { ColorAnimation { duration: Theme.durFast } }
             anchors.verticalCenter: parent.verticalCenter
         }
 

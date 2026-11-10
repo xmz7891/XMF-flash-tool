@@ -9,7 +9,7 @@ Item {
     implicitWidth: 40
     implicitHeight: 26
 
-    readonly property color ink: root.hovered && root.kind === 2 ? "#FFFFFF" : Theme.textSub
+    readonly property color ink: root.hovered && root.kind === 2 ? "#FFFFFF" : "#D8D0C2"
 
     Rectangle {
         anchors.fill: parent

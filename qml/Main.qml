@@ -22,6 +22,10 @@ Window {
     property string currentPage: "console"
 
     Component.onCompleted: {
+        if (Theme.animations) {
+            opacity = 0
+            introFade.start()
+        }
         const w = Number(App.settings.get("ui/windowWidth", 1180))
         const h = Number(App.settings.get("ui/windowHeight", 760))
         width = Math.max(minimumWidth, w)
@@ -55,10 +59,32 @@ Window {
         if (comp === null)
             return
         win.currentPage = key
-        stack.push(comp, props || ({}))
+        stack.push(pageHostComp, { "pageComp": comp, "pageProps": props || ({}) })
+    }
+
+    function pageComponent(key) {
+        switch (key) {
+        case "tools": return toolsComp
+        case "modes": return modesComp
+        case "packets": return packetsComp
+        case "firmware": return firmwareComp
+        case "batch": return batchComp
+        case "logs": return logsComp
+        case "official": return officialComp
+        case "settings": return settingsComp
+        case "cmd-console": return consolePageComp
+        }
+        return null
     }
 
     function openPageByKey(key) {
+        if (stack.depth > 1) {
+            if (win.currentPage === key)
+                return
+            win.currentPage = key
+            stack.replace(pageHostComp, { "pageComp": pageComponent(key), "pageProps": ({}) })
+            return
+        }
         switch (key) {
         case "tools": pushPage(toolsComp, {}, key); break
         case "modes": pushPage(modesComp, {}, key); break
@@ -68,7 +94,7 @@ Window {
         case "logs": pushPage(logsComp, {}, key); break
         case "official": pushPage(officialComp, {}, key); break
         case "settings": pushPage(settingsComp, {}, key); break
-        case "console": pushPage(consolePageComp, {}, key); break
+        case "cmd-console": pushPage(consolePageComp, {}, key); break
         }
     }
 
@@ -81,14 +107,14 @@ Window {
             return
         }
         const keys = ["console", "console", "tools", "modes", "packets", "firmware",
-                      "batch", "logs", "official", "settings", "console"]
+                      "batch", "logs", "official", "settings", "cmd-console"]
         if (index < keys.length)
             openPageByKey(keys[index])
     }
 
     function popToConsole() {
-        while (stack.depth > 1)
-            stack.pop()
+        if (stack.depth > 1)
+            stack.pop(null)
         win.currentPage = "console"
     }
 
@@ -137,7 +163,7 @@ Window {
         case "logs": return "日志"
         case "official": return "官方工具"
         case "settings": return "设置"
-        case "console": return "命令控制台"
+        case "cmd-console": return "命令控制台"
         case "miflash": return "MiFlash 工作台"
         case "spflash": return "SP Flash 工作台"
         case "spdflash": return "SPD Flash 工作台"
@@ -176,6 +202,11 @@ Window {
                 width: parent.width
                 height: 34
 
+                Rectangle {
+                    anchors.fill: parent
+                    color: Theme.sectionBg
+                }
+
                 MouseArea {
                     anchors.fill: parent
                     acceptedButtons: Qt.LeftButton
@@ -203,14 +234,14 @@ Window {
                     }
                     Text {
                         text: "XMF Flash Tool"
-                        color: Theme.text
+                        color: Theme.sectionText
                         font.pixelSize: 12
                         font.weight: Font.DemiBold
                         anchors.verticalCenter: parent.verticalCenter
                     }
                     Text {
                         text: "v" + App.version
-                        color: Theme.textMuted
+                        color: Theme.sectionMuted
                         font.pixelSize: 10
                         anchors.verticalCenter: parent.verticalCenter
                     }
@@ -246,10 +277,15 @@ Window {
                 height: 38
 
                 Rectangle {
+                    anchors.fill: parent
+                    color: Theme.sectionBg
+                }
+
+                Rectangle {
                     anchors.bottom: parent.bottom
                     width: parent.width
                     height: 1
-                    color: Theme.divider
+                    color: "#1F1E1A"
                 }
 
                 Row {
@@ -258,11 +294,11 @@ Window {
                     anchors.verticalCenter: parent.verticalCenter
                     spacing: 2
 
-                    AppButton { text: "功能 ▾"; kind: 2; small: true; onClicked: funcMenu.popup() }
-                    AppButton { text: "通用功能 ▾"; kind: 2; small: true; onClicked: commonMenu.popup() }
-                    AppButton { text: "高级功能 ▾"; kind: 2; small: true; onClicked: advancedMenu.popup() }
-                    AppButton { text: "其他功能 ▾"; kind: 2; small: true; onClicked: otherMenu.popup() }
-                    AppButton { text: "辅助功能 ▾"; kind: 2; small: true; onClicked: helpMenu.popup() }
+                    AppButton { text: "功能 ▾"; kind: 2; small: true; onDark: true; onClicked: funcMenu.popup() }
+                    AppButton { text: "通用功能 ▾"; kind: 2; small: true; onDark: true; onClicked: commonMenu.popup() }
+                    AppButton { text: "高级功能 ▾"; kind: 2; small: true; onDark: true; onClicked: advancedMenu.popup() }
+                    AppButton { text: "其他功能 ▾"; kind: 2; small: true; onDark: true; onClicked: otherMenu.popup() }
+                    AppButton { text: "辅助功能 ▾"; kind: 2; small: true; onDark: true; onClicked: helpMenu.popup() }
                 }
 
                 Menu {
@@ -276,7 +312,7 @@ Window {
                     MenuItem { text: "批量任务"; onTriggered: win.openPageByKey("batch") }
                     MenuItem { text: "日志"; onTriggered: win.openPageByKey("logs") }
                     MenuItem { text: "官方工具"; onTriggered: win.openPageByKey("official") }
-                    MenuItem { text: "命令控制台"; onTriggered: win.openPageByKey("console") }
+                    MenuItem { text: "命令控制台"; onTriggered: win.openPageByKey("cmd-console") }
                     MenuItem { text: "设置"; onTriggered: win.openPageByKey("settings") }
                 }
                 Menu {
@@ -302,7 +338,7 @@ Window {
                 }
                 Menu {
                     id: otherMenu
-                    MenuItem { text: "ADB 命令控制台"; onTriggered: win.openPageByKey("console") }
+                    MenuItem { text: "ADB 命令控制台"; onTriggered: win.openPageByKey("cmd-console") }
                     MenuItem { text: "多设备并行命令"; onTriggered: { win.popToConsole(); console.openTool("adb.multiShell") } }
                     MenuItem { text: "Root 痕迹检测"; onTriggered: { win.popToConsole(); console.openTool("root.hide") } }
                     MenuItem { text: "APatch 内核检查"; onTriggered: { win.popToConsole(); console.openTool("root.apatch.patch") } }
@@ -325,7 +361,7 @@ Window {
 
                     Text {
                         text: "端口 " + App.flashPorts.length
-                        color: Theme.textMuted
+                        color: Theme.sectionMuted
                         font.pixelSize: 10
                         anchors.verticalCenter: parent.verticalCenter
                     }
@@ -334,20 +370,21 @@ Window {
                         icon: "refresh-cw"
                         kind: 1
                         small: true
+                        onDark: true
                         onClicked: { App.scanPorts(); App.refreshDevices() }
                     }
-                    Rectangle { width: 1; height: 18; color: Theme.divider }
+                    Rectangle { width: 1; height: 18; color: "#4A463C" }
                     Text {
                         text: App.deviceMode.label || "未检测到设备"
-                        color: App.deviceMode.mode === "none" ? Theme.textMuted : Theme.text
+                        color: App.deviceMode.mode === "none" ? Theme.sectionMuted : Theme.sectionText
                         font.pixelSize: 11
                         font.weight: Font.DemiBold
                         anchors.verticalCenter: parent.verticalCenter
                     }
-                    Rectangle { width: 1; height: 18; color: Theme.divider }
+                    Rectangle { width: 1; height: 18; color: "#4A463C" }
                     Text {
                         text: "存储 自动"
-                        color: Theme.textMuted
+                        color: Theme.sectionMuted
                         font.pixelSize: 10
                         anchors.verticalCenter: parent.verticalCenter
                     }
@@ -388,7 +425,8 @@ Window {
                                 Rectangle {
                                     anchors.fill: parent
                                     radius: Theme.r6
-                                    color: win.currentPage === modelData.key ? "#3B372E" : "transparent"
+                                    color: win.currentPage === modelData.key ? "#3B372E" : (railMouse.containsMouse ? "#332F28" : "transparent")
+                                    Behavior on color { ColorAnimation { duration: Theme.durFast; easing.type: Easing.OutCubic } }
                                 }
                                 Column {
                                     anchors.centerIn: parent
@@ -398,6 +436,9 @@ Window {
                                         name: modelData.icon
                                         size: 18
                                         tint: win.currentPage === modelData.key ? Theme.accent : "#B9AE9A"
+                                        scale: railMouse.containsMouse ? 1.10 : 1.0
+                                        Behavior on scale { NumberAnimation { duration: Theme.durFast; easing.type: Easing.OutCubic } }
+                                        Behavior on tint { ColorAnimation { duration: Theme.durFast } }
                                     }
                                     Text {
                                         anchors.horizontalCenter: parent.horizontalCenter
@@ -407,6 +448,7 @@ Window {
                                     }
                                 }
                                 MouseArea {
+                                    id: railMouse
                                     anchors.fill: parent
                                     hoverEnabled: true
                                     cursorShape: Qt.PointingHandCursor
@@ -431,9 +473,9 @@ Window {
                         spacing: 0
 
                         Rectangle {
+                            id: overlayBar
                             width: parent.width
-                            height: stack.depth > 1 ? 32 : 0
-                            visible: height > 0
+                            height: 30
                             color: Theme.panelAlt
 
                             Row {
@@ -442,19 +484,61 @@ Window {
                                 anchors.verticalCenter: parent.verticalCenter
                                 spacing: 8
                                 AppButton {
+                                    visible: stack.depth > 1
                                     text: "返回刷机台"
                                     icon: "arrow-left"
                                     kind: 2
                                     small: true
                                     onClicked: win.popToConsole()
                                 }
+                                Rectangle {
+                                    visible: stack.depth === 1
+                                    width: 16; height: 16
+                                    radius: 3
+                                    color: Theme.sectionBg
+                                    IconImage { anchors.centerIn: parent; name: "zap"; size: 10; tint: Theme.accent }
+                                }
                                 Text {
-                                    text: "刷机台 / " + win.pageLabel(win.currentPage)
+                                    id: crumbText
+                                    text: stack.depth === 1 ? "刷机台" : ("刷机台 / " + win.pageLabel(win.currentPage))
+                                    onTextChanged: crumbFade.restart()
+                                    color: stack.depth === 1 ? Theme.text : Theme.textMuted
+                                    font.pixelSize: 11
+                                    font.weight: stack.depth === 1 ? Font.DemiBold : Font.Normal
+                                    anchors.verticalCenter: parent.verticalCenter
+                                }
+                                Text {
+                                    visible: stack.depth === 1
+                                    text: "分区 " + console.rows.length + " · 已选 " + console.selectedRows.length
                                     color: Theme.textMuted
                                     font.pixelSize: 10
                                     anchors.verticalCenter: parent.verticalCenter
                                 }
                             }
+
+                            SequentialAnimation {
+                                id: crumbFade
+                                NumberAnimation { target: crumbText; property: "opacity"; from: 0.25; to: 1; duration: Theme.animations ? 220 : 0; easing.type: Easing.OutCubic }
+                            }
+
+                            Row {
+                                anchors.right: parent.right
+                                anchors.rightMargin: 10
+                                anchors.verticalCenter: parent.verticalCenter
+                                spacing: 10
+                                Text {
+                                    text: App.deviceMode.label || "未连接设备"
+                                    color: Theme.textMuted
+                                    font.pixelSize: 10
+                                }
+                                Rectangle { width: 1; height: 12; color: Theme.divider }
+                                Text {
+                                    text: App.activeTasks.length > 0 ? "任务 " + App.activeTasks.length : "就绪"
+                                    color: App.activeTasks.length > 0 ? Theme.accent : Theme.textMuted
+                                    font.pixelSize: 10
+                                }
+                            }
+
                             Rectangle {
                                 anchors.bottom: parent.bottom
                                 width: parent.width
@@ -467,7 +551,42 @@ Window {
                             id: stack
                             x: 8
                             width: parent.width - 16
-                            height: parent.height - (stack.depth > 1 ? 32 : 0)
+                            height: parent.height - 30
+                            pushEnter: Transition {
+                                ParallelAnimation {
+                                    NumberAnimation { property: "x"; from: 30; to: 0; duration: Theme.animations ? 260 : 0; easing.type: Easing.OutQuint }
+                                    NumberAnimation { property: "scale"; from: 0.996; to: 1; duration: Theme.animations ? 260 : 0; easing.type: Easing.OutQuint }
+                                }
+                            }
+                            pushExit: Transition {
+                                ParallelAnimation {
+                                    NumberAnimation { property: "x"; from: 0; to: -12; duration: Theme.animations ? 260 : 0; easing.type: Easing.OutQuint }
+                                    NumberAnimation { property: "opacity"; from: 1; to: 0.55; duration: Theme.animations ? 260 : 0; easing.type: Easing.OutCubic }
+                                }
+                            }
+                            popEnter: Transition {
+                                ParallelAnimation {
+                                    NumberAnimation { property: "opacity"; from: 0.45; to: 1; duration: Theme.animations ? 170 : 0; easing.type: Easing.OutCubic }
+                                    NumberAnimation { property: "x"; from: -16; to: 0; duration: Theme.animations ? 170 : 0; easing.type: Easing.OutCubic }
+                                }
+                            }
+                            popExit: Transition {
+                                ParallelAnimation {
+                                    NumberAnimation { property: "x"; from: 0; to: 24; duration: Theme.animations ? 240 : 0; easing.type: Easing.OutQuint }
+                                    NumberAnimation { property: "opacity"; from: 1; to: 0.55; duration: Theme.animations ? 240 : 0; easing.type: Easing.OutCubic }
+                                }
+                            }
+                            replaceEnter: Transition {
+                                ParallelAnimation {
+                                    NumberAnimation { property: "x"; from: 18; to: 0; duration: Theme.animations ? 230 : 0; easing.type: Easing.OutQuint }
+                                }
+                            }
+                            replaceExit: Transition {
+                                ParallelAnimation {
+                                    NumberAnimation { property: "x"; from: 0; to: -8; duration: Theme.animations ? 230 : 0; easing.type: Easing.OutQuint }
+                                    NumberAnimation { property: "opacity"; from: 1; to: 0.6; duration: Theme.animations ? 230 : 0; easing.type: Easing.OutCubic }
+                                }
+                            }
                             initialItem: FlashConsolePage {
                                 id: console
                                 onOpenMode: function(modeId) { win.openModePage(modeId) }
@@ -730,6 +849,16 @@ Window {
     Binding { target: Theme; property: "animations"; value: App.settings.animations }
     Binding { target: Theme; property: "darkMode"; value: App.darkTheme }
 
+    NumberAnimation {
+        id: introFade
+        target: win
+        property: "opacity"
+        from: 0
+        to: 1
+        duration: 240
+        easing.type: Easing.OutCubic
+    }
+
     Timer {
         interval: 6000
         running: true
@@ -737,7 +866,19 @@ Window {
         onTriggered: App.refreshDevices()
     }
 
+    // keyboard navigation for the icon rail
+    Shortcut { sequence: "Ctrl+1"; onActivated: win.popToConsole() }
+    Shortcut { sequence: "Ctrl+2"; onActivated: win.openPageByKey("tools") }
+    Shortcut { sequence: "Ctrl+3"; onActivated: win.openPageByKey("modes") }
+    Shortcut { sequence: "Ctrl+4"; onActivated: win.openPageByKey("packets") }
+    Shortcut { sequence: "Ctrl+5"; onActivated: win.openPageByKey("firmware") }
+    Shortcut { sequence: "Ctrl+6"; onActivated: win.openPageByKey("batch") }
+    Shortcut { sequence: "Ctrl+7"; onActivated: win.openPageByKey("logs") }
+    Shortcut { sequence: "Ctrl+8"; onActivated: win.openPageByKey("official") }
+    Shortcut { sequence: "Ctrl+9"; onActivated: win.openPageByKey("settings") }
+
     // --------------------------------------------------------- components
+    Component { id: pageHostComp; PageHost {} }
     Component { id: toolsComp; ToolsPage { categoryFilter: "" } }
     Component { id: modesComp; ModesPage { onOpenMode: function(modeId) { win.openModePage(modeId) } } }
     Component { id: packetsComp; PacketsPage {} }

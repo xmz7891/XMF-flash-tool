@@ -17,7 +17,7 @@ Item {
         color: root.checked ? Theme.accent : Theme.panelAlt
         border.width: 1
         border.color: root.checked ? Theme.accent : Theme.borderStrong
-        Behavior on color { ColorAnimation { duration: 90 } }
+        Behavior on color { ColorAnimation { duration: Theme.durNormal; easing.type: Easing.OutCubic } }
     }
 
     Rectangle {
@@ -27,10 +27,16 @@ Item {
         y: 3
         x: root.checked ? parent.width - width - 3 : 3
         color: root.checked ? "#FFFFFF" : Theme.textSub
-        Behavior on x { NumberAnimation { duration: 90; easing.type: Easing.OutQuad } }
+        scale: mouse.pressed ? 0.88 : 1.0
+        Behavior on scale { NumberAnimation { duration: 120; easing.type: Easing.OutBack } }
+        Behavior on x {
+            enabled: Theme.animations
+            SpringAnimation { spring: 4.8; damping: 0.34; mass: 1.0; epsilon: 0.001 }
+        }
     }
 
     MouseArea {
+        id: mouse
         anchors.fill: parent
         cursorShape: Qt.PointingHandCursor
         onClicked: {

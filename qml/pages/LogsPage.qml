@@ -133,6 +133,7 @@ Item {
                         anchors.fill: parent
                         radius: 6
                         color: rowMouse.containsMouse ? Theme.glass : "transparent"
+                        Behavior on color { ColorAnimation { duration: Theme.durFast } }
                     }
                     Row {
                         anchors.fill: parent
