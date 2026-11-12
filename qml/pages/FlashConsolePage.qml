@@ -21,9 +21,64 @@ Item {
     property bool keepData: false
     property bool readInfo: true
     property bool confirmErase: false
+    property bool preflightOpen: false
+    property string preflightAction: "write"
+    property bool preflightScanning: false
+
+    readonly property var preflightRows: page.buildPreflight()
+
+    function deviceMap() {
+        if (App.fastbootDevices.length > 0) return App.fastbootDevices[0]
+        if (App.adbDevices.length > 0) return App.adbDevices[0]
+        return ({})
+    }
+
+    function buildPreflight() {
+        const dev = page.deviceMap()
+        const mode = App.deviceMode || ({})
+        const info = App.deviceInfo || ({})
+        const port = App.flashPorts.length > 0 ? App.flashPorts[0] : ({})
+        const model = String(dev.model || dev.product || info.model || info.brand || "—")
+        const serialText = String(dev.serial || info.serial || "—")
+        const driver = String(App.driverSummaryText() || "未检测")
+        const portText = App.flashPorts.length > 0
+            ? (String(port.label || port.portName || "USB") + " · " + App.flashPorts.length + " 个端口")
+            : "未发现刷机端口"
+        const imageText = page.selectedFile.length > 0 ? page.selectedFile : "未选择刷机包"
+        return [
+            { k: "设备连接", v: dev.serial ? "已连接" : "未检测到设备", ok: !!dev.serial },
+            { k: "设备型号", v: model, ok: !!dev.serial },
+            { k: "序列号", v: serialText, ok: !!dev.serial },
+            { k: "工作模式", v: String(mode.label || "未检测"), ok: String(mode.mode || "none") !== "none" },
+            { k: "USB 端口", v: portText, ok: App.flashPorts.length > 0 },
+            { k: "驱动状态", v: driver, ok: driver.indexOf("未") !== 0 },
+            { k: "分区表", v: page.rows.length + " 个分区" + (page.rows.length > 0 ? " · 已读取" : " · 未读取"), ok: page.rows.length > 0 },
+            { k: "已选分区", v: page.selectedRows.length + " 个", ok: page.selectedRows.length > 0 },
+            { k: "镜像 / 刷机包", v: imageText, ok: page.selectedFile.length > 0 },
+            { k: "引导文件", v: App.guideFile.length > 0 ? App.guideFile : "未选择（可选）", ok: true },
+            { k: "权限", v: App.admin ? "管理员" : "普通用户 · 部分操作可能失败", ok: App.admin }
+        ]
+    }
+
+    function openPreflight(action) {
+        preflightAction = action
+        preflightOpen = true
+        preflightScanning = true
+        App.refreshDevices()
+        App.scanPorts()
+        App.refreshDeviceMode()
+        scanTimer.restart()
+    }
+
+    function confirmPreflight() {
+        preflightOpen = false
+        if (preflightAction === "write") doWrite()
+        else if (preflightAction === "erase") doErase()
+    }
 
     readonly property var activeTask: App.activeTasks.length > 0 ? App.activeTasks[0] : null
     readonly property var selectedRows: rows.filter(function(r) { return r.selected })
+    readonly property bool allSelected: rows.length > 0 && selectedRows.length === rows.length
     readonly property var filteredRows: rows.filter(function(r) {
         return search.length === 0 || String(r.name).toLowerCase().indexOf(search.toLowerCase()) >= 0
     })
@@ -34,6 +89,36 @@ Item {
         for (const k in copy[index]) merged[k] = copy[index][k]
         for (const k in patch) merged[k] = patch[k]
         copy[index] = merged
+        rows = copy
+    }
+
+    function rowIndexById(id) {
+        for (let i = 0; i < rows.length; ++i)
+            if (rows[i].id === id)
+                return i
+        return -1
+    }
+
+    function toggleRowById(id) {
+        const i = rowIndexById(id)
+        if (i >= 0)
+            toggleRow(i)
+    }
+
+    function chooseImageById(id) {
+        const i = rowIndexById(id)
+        if (i >= 0)
+            chooseImage(i)
+    }
+
+    function setAllSelected(value) {
+        const copy = rows.slice()
+        for (let i = 0; i < copy.length; ++i) {
+            const r = ({})
+            for (const k in copy[i]) r[k] = copy[i][k]
+            r.selected = value
+            copy[i] = r
+        }
         rows = copy
     }
 
@@ -70,8 +155,10 @@ Item {
             return
         }
         const list = []
-        for (const p of (result.partitions || [])) {
+        for (let i = 0; i < (result.partitions || []).length; ++i) {
+            const p = result.partitions[i]
             list.push({
+                id: "p" + i,
                 name: String(p.name || ""),
                 sizeText: String(p.sizeText || ""),
                 address: String(p.address || ""),
@@ -103,6 +190,11 @@ Item {
             App.notify("warning", "写入分区需要 Fastboot 模式设备；9008/Recovery 请使用对应工作台")
             return
         }
+        openPreflight("write")
+    }
+
+    function doWrite() {
+        const chosen = rows.filter(function(r) { return r.selected && r.file.length > 0 })
         for (const row of chosen) {
             App.runTool("fastboot.flash", ({
                 serial: serial(),
@@ -119,11 +211,10 @@ Item {
             App.notify("warning", "请先勾选要擦除的分区")
             return
         }
-        eraseConfirm.visible = true
+        openPreflight("erase")
     }
 
     function doErase() {
-        eraseConfirm.visible = false
         if (App.fastbootDevices.length === 0) {
             App.notify("warning", "擦除分区需要 Fastboot 模式设备")
             return
@@ -162,7 +253,7 @@ Item {
                         spacing: 6
 
                         Rectangle {
-                            width: parent.width - 180
+                            width: parent.width - 246
                             height: 28
                             radius: Theme.r6
                             color: Theme.panelAlt
@@ -187,6 +278,12 @@ Item {
                             onClicked: page.readPartitions()
                         }
                         AppButton {
+                            text: "检测"
+                            kind: 2
+                            small: true
+                            onClicked: page.openPreflight("write")
+                        }
+                        AppButton {
                             text: "全部取消"
                             kind: 2
                             small: true
@@ -208,7 +305,16 @@ Item {
                     Row {
                         width: parent.width
                         height: 20
-                        Text { width: 26; text: ""; color: Theme.textMuted; font.pixelSize: 10 }
+                        Item {
+                            width: 18; height: 18
+                            anchors.verticalCenter: parent.verticalCenter
+                            ModeCheckBox {
+                                anchors.centerIn: parent
+                                checked: page.allSelected
+                                accentColor: Theme.accent
+                                onToggled: function(value) { page.setAllSelected(value) }
+                            }
+                        }
                         Text { width: parent.width * 0.30; text: "分区"; color: Theme.textMuted; font.pixelSize: 10 }
                         Text { width: parent.width * 0.15; text: "大小"; color: Theme.textMuted; font.pixelSize: 10 }
                         Text { width: parent.width * 0.15; text: "操作"; color: Theme.textMuted; font.pixelSize: 10 }
@@ -256,19 +362,14 @@ Item {
                                 Row {
                                     anchors.fill: parent
                                     anchors.leftMargin: 2
-                                    Rectangle {
-                                        width: 14; height: 14
-                                        radius: 2
+                                    Item {
+                                        width: 18; height: 18
                                         anchors.verticalCenter: parent.verticalCenter
-                                        color: modelData.selected ? Theme.accent : "transparent"
-                                        border.width: 1
-                                        border.color: modelData.selected ? Theme.accent : Theme.borderStrong
-                                        IconImage {
+                                        ModeCheckBox {
                                             anchors.centerIn: parent
-                                            visible: modelData.selected
-                                            name: "check"
-                                            size: 10
-                                            tint: Theme.textOnAccent
+                                            checked: modelData.selected
+                                            accentColor: Theme.accent
+                                            onToggled: page.toggleRowById(modelData.id)
                                         }
                                     }
                                     Text {
@@ -308,8 +409,8 @@ Item {
                                     anchors.fill: parent
                                     hoverEnabled: true
                                     cursorShape: Qt.PointingHandCursor
-                                    onClicked: page.toggleRow(page.rows.indexOf(modelData))
-                                    onDoubleClicked: page.chooseImage(page.rows.indexOf(modelData))
+                                    onClicked: page.toggleRowById(modelData.id)
+                                    onDoubleClicked: page.chooseImageById(modelData.id)
                                 }
                             }
                         }
@@ -690,6 +791,147 @@ Item {
 
     ToolSheet { id: toolSheet; anchors.fill: parent }
 
+    Timer {
+        id: scanTimer
+        interval: 1100
+        onTriggered: page.preflightScanning = false
+    }
+
+    Rectangle {
+        id: preflightOverlay
+        anchors.fill: parent
+        visible: page.preflightOpen
+        color: "#000000"
+        opacity: visible ? 0.55 : 0
+        z: 500
+        MouseArea { anchors.fill: parent; onClicked: {} }
+    }
+
+    Rectangle {
+        id: preflightCard
+        anchors.centerIn: parent
+        visible: page.preflightOpen
+        width: 840
+        height: 620
+        radius: 12
+        color: Theme.panel
+        border.width: 1
+        border.color: Theme.borderStrong
+        z: 501
+
+        Column {
+            anchors.fill: parent
+            anchors.margins: 24
+            spacing: 10
+
+            Row {
+                width: parent.width
+                height: 38
+                Text {
+                    text: page.preflightAction === "erase" ? "执行前检测 · 擦除分区" : "执行前检测 · 写入分区"
+                    color: Theme.text
+                    font.pixelSize: 17
+                    font.bold: true
+                    anchors.verticalCenter: parent.verticalCenter
+                }
+                Item { width: parent.width - 420; height: 1 }
+                Text {
+                    text: page.preflightScanning ? "正在检测…" : "检测完成"
+                    color: page.preflightScanning ? Theme.accent : Theme.success
+                    font.pixelSize: 11
+                    anchors.verticalCenter: parent.verticalCenter
+                }
+            }
+
+            Rectangle { width: parent.width; height: 1; color: Theme.divider }
+
+            Text {
+                text: "先确认下面这些状态，再执行任务。任何一项不满足都可能中断刷机。"
+                color: Theme.textSub
+                font.pixelSize: 11
+            }
+
+            Column {
+                width: parent.width
+                spacing: 0
+                Repeater {
+                    model: page.preflightRows
+                    delegate: Item {
+                        width: parent.width
+                        height: 31
+                        Rectangle {
+                            anchors.fill: parent
+                            color: index % 2 === 0 ? Theme.panelAlt : "transparent"
+                            opacity: 0.45
+                        }
+                        Row {
+                            anchors.fill: parent
+                            anchors.leftMargin: 8
+                            anchors.rightMargin: 8
+                            spacing: 8
+                            Rectangle {
+                                width: 7; height: 7; radius: 4
+                                anchors.verticalCenter: parent.verticalCenter
+                                color: modelData.ok ? Theme.success : Theme.danger
+                            }
+                            Text {
+                                width: 112
+                                text: modelData.k
+                                color: Theme.textMuted
+                                font.pixelSize: 10
+                                anchors.verticalCenter: parent.verticalCenter
+                            }
+                            Text {
+                                width: parent.width - 150
+                                text: modelData.v
+                                color: modelData.ok ? Theme.text : Theme.danger
+                                font.pixelSize: 10
+                                elide: Text.ElideMiddle
+                                anchors.verticalCenter: parent.verticalCenter
+                            }
+                        }
+                    }
+                }
+            }
+
+            Item { width: 1; height: 2 }
+
+            Text {
+                width: parent.width
+                text: "注意：刷写/擦除会修改设备分区，请确认固件型号、槽位与电量，并提前备份数据。"
+                color: Theme.warning
+                font.pixelSize: 10
+                wrapMode: Text.WordWrap
+            }
+
+            Row {
+                width: parent.width
+                height: 34
+                spacing: 10
+                Item { width: parent.width - 430; height: 1 }
+                AppButton {
+                    text: "取消"
+                    kind: 2
+                    small: true
+                    onClicked: page.preflightOpen = false
+                }
+                AppButton {
+                    text: "重新检测"
+                    kind: 1
+                    small: true
+                    onClicked: page.openPreflight(page.preflightAction)
+                }
+                AppButton {
+                    text: "继续执行"
+                    kind: 0
+                    small: true
+                    enabled: page.fastbootDevices.length > 0 && page.selectedRows.length > 0
+                    onClicked: page.confirmPreflight()
+                }
+            }
+        }
+    }
+
     DropArea {
         anchors.fill: parent
         keys: ["urls"]
@@ -702,10 +944,12 @@ Item {
                 const result = App.workspace.loadGptImage(path)
                 if (result && result.ok && result.partitions.length > 0) {
                     const list = []
-                    for (const p of result.partitions)
-                        list.push({ name: String(p.name || ""), sizeText: String(p.sizeText || ""),
+                    for (let i = 0; i < result.partitions.length; ++i) {
+                        const p = result.partitions[i]
+                        list.push({ id: "p" + i, name: String(p.name || ""), sizeText: String(p.sizeText || ""),
                                     address: String(p.address || ""), size: Number(p.size || 0),
                                     file: "", selected: false })
+                    }
                     page.rows = list
                 }
             }

@@ -60,11 +60,11 @@ Item {
 
     function runAction(name) {
         if (table.count === 0) {
-            App.notify("warning", "请先读取设备分区；RK 固件容器解析将在后续接入")
+            App.notify("warning", "请先加载 RK 固件或读取设备分区")
             return
         }
         logBox.append("info", "触发操作：" + name)
-        App.notify("info", "RK 刷写：请先将设备切到 MaskROM / Loader 模式，并在工具库中使用 RK 流水线（读取分区后即可备份/写入单分区）")
+        App.notify("info", "RK 刷写：请将设备切到 MaskROM / Loader，工具库中的 RockUSB 流水线可读取/备份/写入扇区与分区")
     }
 
     ModeFrame {
@@ -72,7 +72,7 @@ Item {
         anchors.fill: parent
 
         title: "RKDevTool"
-        subtitle: "瑞芯微固件与分区镜像 · MaskROM / Loader 下载"
+        subtitle: "瑞芯微固件与分区镜像 · MaskROM / Loader 下载（RockUSB 真实读写）"
         icon: "box"
         tag: "ROCKUSB"
         accentColor: page.modeColor

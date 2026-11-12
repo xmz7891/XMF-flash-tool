@@ -11,6 +11,7 @@
 #include <QTimer>
 
 #include "AppController.h"
+#include "FreeNotice.h"
 
 #include <QEventLoop>
 #include <QLocalServer>
@@ -127,6 +128,14 @@ int main(int argc, char* argv[])
     parser.addOption(batchFilesOpt);
     parser.addOption(batchParallelOpt);
     parser.process(app);
+
+    // Mandatory integrity gate: without the encrypted free-notice module the
+    // application must not load any UI or tooling.
+    if (!gf::notice::verify()) {
+        qCritical("XMF: free-notice integrity check failed; refusing to start");
+        fprintf(stderr, "XMF: free-notice integrity check failed; refusing to start\n");
+        return 4;
+    }
 
     // ---- caches and logs ---------------------------------------------------
     QDir().mkpath(util::appDataDir());

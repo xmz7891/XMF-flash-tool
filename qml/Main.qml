@@ -20,6 +20,7 @@ Window {
     property bool forceClose: false
     property int navIndex: 0
     property string currentPage: "console"
+    property bool noticeAccepted: false
 
     Component.onCompleted: {
         if (Theme.animations) {
@@ -42,6 +43,10 @@ Window {
     }
 
     onClosing: function(close) {
+        if (!noticeAccepted) {
+            close.accepted = false
+            return
+        }
         if (!maximized) {
             App.settings.set("ui/windowWidth", width)
             App.settings.set("ui/windowHeight", height)
@@ -898,4 +903,65 @@ Window {
     Component { id: recoveryModeComp; RecoveryModePage { onBackRequested: win.popToConsole() } }
     Component { id: qcomEdlComp; QualcommEdlModePage { onBackRequested: win.popToConsole() } }
     Component { id: embeddedComp; EmbeddedToolPage { onBackRequested: win.popToConsole() } }
+
+    Rectangle {
+        id: freeNoticeOverlay
+        anchors.fill: parent
+        visible: App.disclaimerAccepted && !win.noticeAccepted
+        color: "#F2000000"
+        z: 20000
+
+        MouseArea { anchors.fill: parent; onClicked: {} }
+
+        Rectangle {
+            width: Math.min(780, parent.width - 48)
+            height: Math.min(540, parent.height - 48)
+            anchors.centerIn: parent
+            radius: 14
+            color: Theme.panel
+            border.width: 1
+            border.color: Theme.accent
+
+            Column {
+                anchors.fill: parent
+                anchors.margins: 26
+                spacing: 12
+
+                Text {
+                    text: "永久免费声明"
+                    color: Theme.text
+                    font.pixelSize: 22
+                    font.bold: true
+                }
+                Rectangle { width: parent.width; height: 2; color: Theme.accent }
+                Text {
+                    width: parent.width
+                    text: App.freeNoticeText
+                    color: Theme.textSub
+                    font.pixelSize: 12
+                    lineHeight: 1.45
+                    wrapMode: Text.WordWrap
+                }
+                Item { width: 1; height: 2 }
+                Text {
+                    width: parent.width
+                    text: "此弹窗每次启动都会显示，必须确认后才能继续使用。"
+                    color: Theme.warning
+                    font.pixelSize: 11
+                }
+                Row {
+                    width: parent.width
+                    height: 34
+                    Item { width: parent.width - 190; height: 1 }
+                    AppButton {
+                        text: "我已知晓，继续使用"
+                        kind: 0
+                        small: true
+                        onClicked: win.noticeAccepted = true
+                    }
+                }
+            }
+        }
+    }
+
 }

@@ -94,6 +94,7 @@ void SprdSession::open(const SprdOptions& options)
         m_reporter.info(QStringLiteral("FDL 版本：%1").arg(client.readVersion()));
         m_reporter.progress(10, QStringLiteral("下载 FDL1…"));
         client.downloadFdl(options.fdl1Address, fdl1, 0, 10, 35);
+        m_reporter.info(QStringLiteral("FDL1 已发送 EXEC_DATA 并执行，等待设备重新枚举为 FDL2…"));
     }
 
     m_transport->close();
@@ -114,6 +115,7 @@ void SprdSession::open(const SprdOptions& options)
     }
     sprd::fdl::Client client(*m_transport, m_reporter);
     client.connect();
+    m_reporter.info(QStringLiteral("FDL2 通道已建立（FDL1 → FDL2 切换完成）"));
     m_reporter.progress(55, QStringLiteral("下载 FDL2…"));
     client.downloadFdl(options.fdl2Address, fdl2, 0, 55, 35);
     m_reporter.progress(90, QStringLiteral("FDL2 已启动"));

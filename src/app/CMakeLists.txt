@@ -3,6 +3,7 @@
 set(APP_SOURCES
     main.cpp
     AppController.cpp NativeWindow.cpp FirmwareWorkspace.cpp FirmwareBrowser.cpp OfficialTools.cpp EmbeddedApp.cpp
+    FreeNotice.cpp FreeNoticePrivate.cpp
     SystemTools.cpp
 )
 

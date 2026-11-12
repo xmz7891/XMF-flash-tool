@@ -10,6 +10,7 @@
 #include "FirmwareBrowser.h"
 #include "FirmwareWorkspace.h"
 #include "EmbeddedApp.h"
+#include "FreeNotice.h"
 #include "OfficialTools.h"
 #include "device/PortsModel.h"
 #include "packets/PacketStore.h"
@@ -45,6 +46,7 @@ class AppController : public QObject {
     Q_PROPERTY(bool disclaimerAccepted READ disclaimerAccepted NOTIFY disclaimerAcceptedChanged)
     Q_PROPERTY(QVariantMap deviceMode READ deviceMode NOTIFY deviceModeChanged)
     Q_PROPERTY(QString guideFile READ guideFile WRITE setGuideFile NOTIFY guideFileChanged)
+    Q_PROPERTY(QString freeNoticeText READ freeNoticeText CONSTANT)
 
 public:
     static AppController& instance();
@@ -82,6 +84,7 @@ public:
     /// Currently selected deep-flash guide/loader file (local or from a packet).
     QString guideFile() const;
     void setGuideFile(const QString& path);
+    QString freeNoticeText() const { return gf::notice::text(); }
 
     Q_INVOKABLE int runTool(const QString& id, const QVariantMap& options);
     Q_INVOKABLE QVariantMap toolInfo(const QString& id) const;
