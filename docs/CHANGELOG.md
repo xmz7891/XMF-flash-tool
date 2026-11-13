@@ -1,5 +1,12 @@
 # 更新记录
 
+## v0.2
+
+* 修复分区表复选框无法勾选：按行唯一 id 切换，支持表头全选。
+* 新增「执行前检测」：写入/擦除前检查连接、型号、序列号、工作模式、USB 端口、驱动、分区、已选分区、镜像、引导文件与权限。
+* 展锐 FDL1 → FDL2 切换增加明确日志（EXEC_DATA / 重新枚举 / FDL2 通道建立）。
+* 瑞芯微 RKDevTool 模式页补齐 RockUSB 读写说明与入口文案。
+
 ## v0.1.1
 
 * 修复 QML 运行时问题：ConsolePage 空设备 combo TypeError、PacketsPage Column 锚点警告、
