@@ -1,6 +1,6 @@
 # 验证记录
 
-版本：XMF Flash Tool v0.2
+版本：XMF Flash Tool v0.21
 环境：Windows 11 · Qt 6.8.3 · MinGW 13.1 · CMake 3.30 · C++20
 
 ## 1. 构建

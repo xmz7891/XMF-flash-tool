@@ -1,3 +1,10 @@
+## v0.21
+
+- 新增 4 个文件解析工具：Qualcomm MBN/ELF、Oplus Digest、MTK Legacy PMT/MPT、Samsung PIT
+- 新增 Samsung 工具分类
+- 修复刷机台预检弹窗“继续执行”按钮引用未定义 `fastbootDevices` 导致的 QML TypeError
+- 工具总数 220，全部可运行
+
 # 更新记录
 
 ## v0.2

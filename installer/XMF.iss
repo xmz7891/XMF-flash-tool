@@ -2,7 +2,7 @@
 ; Build: ISCC.exe /Qp installer\XMF.iss
 
 #define MyAppName "XMF Flash Tool"
-#define MyAppVersion "0.2"
+#define MyAppVersion "0.21"
 #define MyAppPublisher "XMF"
 #define MyAppExeName "XMF.exe"
 #define MySourceDir "..\dist\XMF-Flash-Tool-full"
@@ -33,7 +33,7 @@ MinVersion=10.0
 LicenseFile=LICENSE.txt
 CloseApplications=yes
 RestartApplications=no
-VersionInfoVersion=0.2.0.0
+VersionInfoVersion=0.21.0.0
 VersionInfoCompany={#MyAppPublisher}
 VersionInfoDescription=XMF Flash Tool 安装程序
 VersionInfoProductName={#MyAppName}
