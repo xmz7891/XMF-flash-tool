@@ -925,7 +925,7 @@ Item {
                     text: "继续执行"
                     kind: 0
                     small: true
-                    enabled: page.fastbootDevices.length > 0 && page.selectedRows.length > 0
+                    enabled: App.fastbootDevices.length > 0 && page.selectedRows.length > 0
                     onClicked: page.confirmPreflight()
                 }
             }
