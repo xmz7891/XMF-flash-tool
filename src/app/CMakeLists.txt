@@ -18,7 +18,7 @@ target_link_libraries(XMF PRIVATE
     Qt6::Core Qt6::Gui Qt6::Quick Qt6::QuickControls2 Qt6::Svg Qt6::Network Qt6::Sql
     gf_core gf_image gf_packets gf_usb gf_device
     gf_qcom gf_mtk gf_sprd gf_rk gf_aw
-    gf_extras gf_firmware gf_flows
+    gf_extras gf_firmware gf_flows gf_samsung
 )
 target_compile_definitions(XMF PRIVATE XMF_VERSION="${PROJECT_VERSION}")
 if(WIN32)

@@ -6,6 +6,7 @@ add_library(gf_mtk STATIC
     Da.cpp Da.h
     Preloader.cpp Preloader.h
     Scatter.cpp Scatter.h
+    LegacyPmt.cpp LegacyPmt.h
 )
 target_include_directories(gf_mtk PUBLIC ${CMAKE_CURRENT_SOURCE_DIR} ${CMAKE_CURRENT_SOURCE_DIR}/..)
 target_link_libraries(gf_mtk PUBLIC gf_core gf_usb Qt6::Core)

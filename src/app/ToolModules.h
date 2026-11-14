@@ -15,6 +15,7 @@ void registerMtkTools();
 void registerSprdTools();
 void registerRkTools();
 void registerAwTools();
+void registerSamsungTools();
 void registerFlowTools();
 void registerRootTools();
 void registerBootloaderTools();

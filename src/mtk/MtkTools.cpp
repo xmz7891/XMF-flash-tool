@@ -13,6 +13,7 @@
 #include "Da.h"
 #include "Preloader.h"
 #include "Scatter.h"
+#include "LegacyPmt.h"
 #include "TaskManager.h"
 #include "ToolRegistry.h"
 #include "Util.h"
@@ -423,8 +424,48 @@ void registerDaTools()
     }
 }
 
+
+void legacyPmtParse(TaskContext& ctx, const QVariantMap& options)
+{
+    const QString path = options.value(QStringLiteral("file")).toString().trimmed();
+    if (path.isEmpty())
+        throw std::runtime_error("select a USER image / firmware dump");
+    const QByteArray data = util::readFile(path);
+    if (data.isEmpty())
+        throw std::runtime_error("cannot read USER image");
+    const mtk::LegacyPmtInfo info = mtk::parseLegacyPmt(data);
+    if (!info.valid)
+        throw std::runtime_error(QStringLiteral("legacy PMT parse failed: %1").arg(info.error).toStdString());
+    ctx.info(mtk::describeLegacyPmt(info));
+    for (const auto& entry : info.entries) {
+        ctx.info(QStringLiteral("%1  offset=0x%2  size=0x%3  flags=0x%4")
+                     .arg(entry.name)
+                     .arg(entry.offset, 0, 16)
+                     .arg(entry.size, 0, 16)
+                     .arg(entry.maskFlags, 0, 16));
+    }
+    ctx.ok(QStringLiteral("legacy PMT parsed: %1 partition(s)").arg(info.entries.size()));
+}
+
 void registerParserTools()
 {
+    using namespace gf::fields;
+    {
+        ToolSpec spec;
+        spec.id = QStringLiteral("mtk.legacy.pmt");
+        spec.category = QStringLiteral("mtk");
+        spec.group = QStringLiteral("tool");
+        spec.name = QStringLiteral("Legacy PMT / MPT");
+        spec.desc = QStringLiteral("Parse MediaTek legacy PT/MPT partition table at the end of a USER image");
+        spec.icon = QStringLiteral("table-2");
+        spec.keywords = {QStringLiteral("pmt"), QStringLiteral("mpt"), QStringLiteral("legacy"),
+                         QStringLiteral("mtk"), QStringLiteral("partition")};
+        spec.fields = {path(QStringLiteral("file"), QStringLiteral("USER image / dump"),
+                            QStringLiteral("*.bin *.img *.*"))};
+        spec.order = 55;
+        addTool(spec, legacyPmtParse);
+    }
+
     {
         ToolSpec spec;
         spec.id = QStringLiteral("mtk.preloader.parse");

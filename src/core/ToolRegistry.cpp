@@ -69,6 +69,7 @@ QVariantList ToolRegistry::categories() const
         {"sprd", "紫光展锐", "layers", "#F2A93B"},
         {"rk", "瑞芯微 RK", "box", "#57C7A3"},
         {"aw", "全志 A 系列", "sun", "#B98CFF"},
+        {"samsung", "三星 Samsung", "tablet", "#4DD0E1"},
         {"root", "Root / KSU / 面具", "key-round", "#34D399"},
         {"unlock", "账号锁 / 清除", "lock-keyhole", "#FB7185"},
         {"adb", "ADB / Fastboot", "terminal", "#38BDF8"},

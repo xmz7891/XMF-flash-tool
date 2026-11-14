@@ -97,6 +97,7 @@ void AppController::initialize()
     registerSprdTools();
     registerRkTools();
     registerAwTools();
+    registerSamsungTools();
     registerFlowTools();
     registerRootTools();
     registerBootloaderTools();

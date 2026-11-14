@@ -1,6 +1,6 @@
 # XMF Flash Tool
 
-**一款面向 Windows 的 C++/Qt6 桌面刷机工具：Fastboot / Recovery / 9008(EDL) 三种模式分流、五个内置工作台、216 个可运行工具。
+**一款面向 Windows 的 C++/Qt6 桌面刷机工具：Fastboot / Recovery / 9008(EDL) 三种模式分流、五个内置工作台、220 个可运行工具。
 内置高通、联发科、紫光展锐、瑞芯微、全志平台支持，并原生解析三套平台深度刷机引导包（免授权 DA / Loader / FDL）。**
 
 ![main](docs/screenshots/main.png)
@@ -150,7 +150,7 @@ XMF Flash Tool 使用 **C++20 + Qt 6.8** 编写，主界面是一块**单屏刷�
 
 ## 工具清单
 
-当前共 **216 个工具，全部可运行**，按 13 个分类组织，完整清单见 [docs/TOOL_LIST.md](docs/TOOL_LIST.md)：
+当前共 **220 个工具，全部可运行**，按 14 个分类组织，完整清单见 [docs/TOOL_LIST.md](docs/TOOL_LIST.md)：
 
 | 分类 | 数量 | 分类 | 数量 |
 | --- | --- | --- | --- |
@@ -283,7 +283,7 @@ XMF.exe [options]
 | 单元测试 | **42 个测试类，0 失败** |
 | 随包校验 | `scripts/verify_package.ps1` → **PASS: 9 checks OK**（含 19 项环境自检） |
 | UI 冒烟 | `scripts/smoke_test.ps1` → **PASS: 15 pages**（含 Fastboot / Recovery / 9008 工作台） |
-| 工具注册 | **216 个工具，216 可运行，0 占位** |
+| 工具注册 | **220 个工具，220 可运行，0 占位** |
 | 真机验证 | Fastboot 92 分区读取、210 变量备份、CSV 导出、OEM device-info、自动模式识别、刷写前检查 |
 
 完整记录见 [docs/VERIFICATION.md](docs/VERIFICATION.md)。

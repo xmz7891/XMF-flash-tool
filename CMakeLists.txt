@@ -35,6 +35,7 @@ add_subdirectory(src/mtk)         # MediaTek BROM / DA / scatter
 add_subdirectory(src/sprd)        # Spreadtrum FDL / PAC
 add_subdirectory(src/rk)          # Rockchip RockUSB
 add_subdirectory(src/aw)          # Allwinner FEL
+add_subdirectory(src/samsung)     # Samsung PIT / Odin
 add_subdirectory(src/extras)      # root / bootloader / unlock / bypass tooling
 add_subdirectory(src/firmware)    # firmware resource search + local library
 add_subdirectory(src/flows)       # crossing-platform flashing pipelines

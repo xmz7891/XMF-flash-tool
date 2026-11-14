@@ -5,6 +5,7 @@ namespace gf {
 // 工具注册按主题拆分到多个翻译单元，全部由本函数统一挂载。
 void registerImageFirmwareTools();
 void registerImageConvertTools();
+void registerMbnTools();
 
 // Image/firmware tools are registered here by the image-core teammate.
 // Implement them in separate translation units inside src/image/ and call
@@ -13,6 +14,7 @@ void registerImageTools()
 {
     registerImageFirmwareTools();
     registerImageConvertTools();
+    registerMbnTools();
 }
 
 } // namespace gf
