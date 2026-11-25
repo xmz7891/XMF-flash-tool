@@ -43,7 +43,10 @@ Item {
                 file: p.file !== undefined && p.file !== null ? String(p.file) : "",
                 detail: p.detail !== undefined && p.detail !== null ? String(p.detail) : "",
                 region: p.region !== undefined && p.region !== null ? String(p.region) : "",
-                checked: p.checked !== false
+                checked: p.checked !== false,
+                lun: p.lun !== undefined && p.lun !== null ? String(p.lun) : "",
+                index: p.index !== undefined && p.index !== null ? Number(p.index) : (i + 1),
+                startSector: p.startSector !== undefined && p.startSector !== null ? String(p.startSector) : ""
             })
         }
         root.rows = data
@@ -59,6 +62,14 @@ Item {
         root.updateSelection()
     }
 
+    function setFile(i, path) {
+        const r = rowAt(i)
+        if (!r)
+            return
+        r.file = path
+        root.revision += 1
+    }
+
     function rowAt(i) {
         return i >= 0 && i < root.rows.length ? root.rows[i] : null
     }
@@ -72,7 +83,11 @@ Item {
         if (role === "stateText")
             return r.file.length > 0 ? "已加载" : "—"
         if (role === "lun")
-            return r.region.length > 0 ? r.region : "—"
+            return r.lun.length > 0 ? r.lun : "—"
+        if (role === "index")
+            return String(r.index)
+        if (role === "startSector")
+            return r.startSector.length > 0 ? r.startSector : "—"
         let v = r[role]
         if ((v === undefined || v === null || v === "") && role === "file")
             v = r.region
@@ -172,7 +187,7 @@ Item {
                         horizontalAlignment: modelData.align === "right" ? Text.AlignRight : Text.AlignLeft
                         text: modelData.label || ""
                         color: Theme.textSub
-                        font.pixelSize: 10
+                        font.pixelSize: Theme.fs(10)
                         font.weight: Font.DemiBold
                         elide: Text.ElideRight
                     }
@@ -297,7 +312,7 @@ Item {
                                             anchors.centerIn: parent
                                             text: root.rowActionText
                                             color: Theme.textSub
-                                            font.pixelSize: 9
+                                            font.pixelSize: Theme.fs(9)
                                         }
 
                                         MouseArea {

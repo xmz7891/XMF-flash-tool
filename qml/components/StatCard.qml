@@ -21,21 +21,21 @@ Item {
         Text {
             text: root.label
             color: Theme.textMuted
-            font.pixelSize: 10
+            font.pixelSize: Theme.fs(10)
         }
         Row {
             spacing: 3
             Text {
                 text: root.value
                 color: Theme.text
-                font.pixelSize: 16
+                font.pixelSize: Theme.fs(16)
                 font.weight: Font.DemiBold
             }
             Text {
                 visible: root.unit !== ""
                 text: root.unit
                 color: Theme.textMuted
-                font.pixelSize: 10
+                font.pixelSize: Theme.fs(10)
                 anchors.baseline: parent.bottom
                 anchors.baselineOffset: -2
             }

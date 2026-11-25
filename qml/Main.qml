@@ -26,7 +26,19 @@ Window {
     property string currentPage: "console"
     property bool noticeAccepted: false
 
+    function updateUiScale() {
+        Theme.uiScale = Math.max(0.84, Math.min(1.0,
+            Math.min(width / 1180, height / 760)))
+    }
+
+    onWidthChanged: updateUiScale()
+    onHeightChanged: updateUiScale()
+
     Component.onCompleted: {
+        updateUiScale()
+        // Screenshot automation must see the real page, not the free notice.
+        if (Qt.application.arguments.indexOf("--screenshot") >= 0)
+            noticeAccepted = true
         if (Theme.animations) {
             opacity = 0
             introFade.start()
@@ -145,6 +157,7 @@ Window {
         case "fastboot": pushPage(fastbootModeComp, { "platform": "qcom" }, "fastboot"); break
         case "recovery": pushPage(recoveryModeComp, { "platform": "qcom" }, "recovery"); break
         case "qcom-edl": pushPage(qcomEdlComp, {}, "qcom-edl"); break
+        case "amlogic-burn": pushPage(amlogicComp, {}, "amlogic"); break
         }
     }
 
@@ -199,6 +212,7 @@ Window {
         case "fastboot": return "Fastboot 工作台"
         case "recovery": return "Recovery 工作台"
         case "qcom-edl": return "Qualcomm 9008 工作台"
+        case "amlogic": return "Amlogic USB Burning 工作台"
         case "embedded": return "官方工具"
         }
         return key
@@ -216,6 +230,7 @@ Window {
         id: shell
         anchors.fill: parent
         radius: maximized ? 0 : 6
+        Behavior on radius { NumberAnimation { duration: Theme.animations ? 180 : 0; easing.type: Easing.OutCubic } }
         color: Theme.windowBg
         border.width: 1
         border.color: Theme.windowBorder
@@ -262,14 +277,14 @@ Window {
                     Text {
                         text: "XMF Flash Tool"
                         color: Theme.sectionText
-                        font.pixelSize: 12
+                        font.pixelSize: Theme.fs(12)
                         font.weight: Font.DemiBold
                         anchors.verticalCenter: parent.verticalCenter
                     }
                     Text {
                         text: "v" + App.version
                         color: Theme.sectionMuted
-                        font.pixelSize: 10
+                        font.pixelSize: Theme.fs(10)
                         anchors.verticalCenter: parent.verticalCenter
                     }
                     Rectangle {
@@ -281,7 +296,7 @@ Window {
                             anchors.centerIn: parent
                             text: "管理员"
                             color: Theme.warning
-                            font.pixelSize: 9
+                            font.pixelSize: Theme.fs(9)
                         }
                         anchors.verticalCenter: parent.verticalCenter
                     }
@@ -330,6 +345,19 @@ Window {
 
                 Menu {
                     id: funcMenu
+
+                    enter: Transition {
+                        ParallelAnimation {
+                            NumberAnimation { property: "opacity"; from: 0; to: 1; duration: 130; easing.type: Easing.OutCubic }
+                            NumberAnimation { property: "scale"; from: 0.97; to: 1; duration: 130; easing.type: Easing.OutCubic }
+                        }
+                    }
+                    exit: Transition {
+                        ParallelAnimation {
+                            NumberAnimation { property: "opacity"; from: 1; to: 0; duration: 90; easing.type: Easing.InCubic }
+                            NumberAnimation { property: "scale"; from: 1; to: 0.98; duration: 90; easing.type: Easing.InCubic }
+                        }
+                    }
                     MenuItem { text: "刷机台"; onTriggered: win.popToConsole() }
                     MenuSeparator { }
                     MenuItem { text: "工具库"; onTriggered: win.openPageByKey("tools") }
@@ -344,6 +372,19 @@ Window {
                 }
                 Menu {
                     id: commonMenu
+
+                    enter: Transition {
+                        ParallelAnimation {
+                            NumberAnimation { property: "opacity"; from: 0; to: 1; duration: 130; easing.type: Easing.OutCubic }
+                            NumberAnimation { property: "scale"; from: 0.97; to: 1; duration: 130; easing.type: Easing.OutCubic }
+                        }
+                    }
+                    exit: Transition {
+                        ParallelAnimation {
+                            NumberAnimation { property: "opacity"; from: 1; to: 0; duration: 90; easing.type: Easing.InCubic }
+                            NumberAnimation { property: "scale"; from: 1; to: 0.98; duration: 90; easing.type: Easing.InCubic }
+                        }
+                    }
                     MenuItem { text: "读取分区表"; onTriggered: { win.popToConsole(); Qt.callLater(console.readPartitions) } }
                     MenuItem { text: "读取设备信息"; onTriggered: { win.popToConsole(); console.openTool("adb.info") } }
                     MenuItem { text: "Fastboot 电池状态"; onTriggered: { win.popToConsole(); console.openTool("fastboot.battery") } }
@@ -354,6 +395,19 @@ Window {
                 }
                 Menu {
                     id: advancedMenu
+
+                    enter: Transition {
+                        ParallelAnimation {
+                            NumberAnimation { property: "opacity"; from: 0; to: 1; duration: 130; easing.type: Easing.OutCubic }
+                            NumberAnimation { property: "scale"; from: 0.97; to: 1; duration: 130; easing.type: Easing.OutCubic }
+                        }
+                    }
+                    exit: Transition {
+                        ParallelAnimation {
+                            NumberAnimation { property: "opacity"; from: 1; to: 0; duration: 90; easing.type: Easing.InCubic }
+                            NumberAnimation { property: "scale"; from: 1; to: 0.98; duration: 90; easing.type: Easing.InCubic }
+                        }
+                    }
                     MenuItem { text: "Fastboot 工作台"; onTriggered: win.openFlashMode("fastboot:qcom") }
                     MenuItem { text: "Recovery 卡刷"; onTriggered: win.openFlashMode("recovery:qcom") }
                     MenuItem { text: "Qualcomm 9008 (EDL)"; onTriggered: win.openFlashMode("qcom-edl") }
@@ -365,6 +419,19 @@ Window {
                 }
                 Menu {
                     id: otherMenu
+
+                    enter: Transition {
+                        ParallelAnimation {
+                            NumberAnimation { property: "opacity"; from: 0; to: 1; duration: 130; easing.type: Easing.OutCubic }
+                            NumberAnimation { property: "scale"; from: 0.97; to: 1; duration: 130; easing.type: Easing.OutCubic }
+                        }
+                    }
+                    exit: Transition {
+                        ParallelAnimation {
+                            NumberAnimation { property: "opacity"; from: 1; to: 0; duration: 90; easing.type: Easing.InCubic }
+                            NumberAnimation { property: "scale"; from: 1; to: 0.98; duration: 90; easing.type: Easing.InCubic }
+                        }
+                    }
                     MenuItem { text: "ADB 命令控制台"; onTriggered: win.openPageByKey("cmd-console") }
                     MenuItem { text: "多设备并行命令"; onTriggered: { win.popToConsole(); console.openTool("adb.multiShell") } }
                     MenuItem { text: "Root 痕迹检测"; onTriggered: { win.popToConsole(); console.openTool("root.hide") } }
@@ -373,6 +440,19 @@ Window {
                 }
                 Menu {
                     id: helpMenu
+
+                    enter: Transition {
+                        ParallelAnimation {
+                            NumberAnimation { property: "opacity"; from: 0; to: 1; duration: 130; easing.type: Easing.OutCubic }
+                            NumberAnimation { property: "scale"; from: 0.97; to: 1; duration: 130; easing.type: Easing.OutCubic }
+                        }
+                    }
+                    exit: Transition {
+                        ParallelAnimation {
+                            NumberAnimation { property: "opacity"; from: 1; to: 0; duration: 90; easing.type: Easing.InCubic }
+                            NumberAnimation { property: "scale"; from: 1; to: 0.98; duration: 90; easing.type: Easing.InCubic }
+                        }
+                    }
                     MenuItem { text: "打开数据目录"; onTriggered: App.openPath(App.dataPath) }
                     MenuItem { text: "日志目录"; onTriggered: App.openPath(App.dataPath) }
                     MenuItem { text: "使用指南"; onTriggered: App.openDocs("USER_GUIDE.md") }
@@ -389,7 +469,7 @@ Window {
                     Text {
                         text: "端口 " + App.flashPorts.length
                         color: Theme.sectionMuted
-                        font.pixelSize: 10
+                        font.pixelSize: Theme.fs(10)
                         anchors.verticalCenter: parent.verticalCenter
                     }
                     AppButton {
@@ -404,7 +484,7 @@ Window {
                     Text {
                         text: App.deviceMode.label || "未检测到设备"
                         color: App.deviceMode.mode === "none" ? Theme.sectionMuted : Theme.sectionText
-                        font.pixelSize: 11
+                        font.pixelSize: Theme.fs(11)
                         font.weight: Font.DemiBold
                         anchors.verticalCenter: parent.verticalCenter
                     }
@@ -412,7 +492,7 @@ Window {
                     Text {
                         text: "存储 自动"
                         color: Theme.sectionMuted
-                        font.pixelSize: 10
+                        font.pixelSize: Theme.fs(10)
                         anchors.verticalCenter: parent.verticalCenter
                     }
                 }
@@ -471,7 +551,7 @@ Window {
                                         anchors.horizontalCenter: parent.horizontalCenter
                                         text: modelData.label
                                         color: win.currentPage === modelData.key ? Theme.accent : "#9C9182"
-                                        font.pixelSize: 9
+                                        font.pixelSize: Theme.fs(9)
                                     }
                                 }
                                 MouseArea {
@@ -504,6 +584,7 @@ Window {
                             width: parent.width
                             height: win.currentPage === "embedded" ? 0 : 30
                             visible: height > 0
+                            Behavior on height { NumberAnimation { duration: Theme.animations ? 160 : 0; easing.type: Easing.OutCubic } }
                             color: Theme.panelAlt
 
                             Row {
@@ -531,7 +612,7 @@ Window {
                                     text: stack.depth === 1 ? "刷机台" : ("刷机台 / " + win.pageLabel(win.currentPage))
                                     onTextChanged: crumbFade.restart()
                                     color: stack.depth === 1 ? Theme.text : Theme.textMuted
-                                    font.pixelSize: 11
+                                    font.pixelSize: Theme.fs(11)
                                     font.weight: stack.depth === 1 ? Font.DemiBold : Font.Normal
                                     anchors.verticalCenter: parent.verticalCenter
                                 }
@@ -539,7 +620,7 @@ Window {
                                     visible: stack.depth === 1
                                     text: "分区 " + console.rows.length + " · 已选 " + console.selectedRows.length
                                     color: Theme.textMuted
-                                    font.pixelSize: 10
+                                    font.pixelSize: Theme.fs(10)
                                     anchors.verticalCenter: parent.verticalCenter
                                 }
                             }
@@ -557,13 +638,13 @@ Window {
                                 Text {
                                     text: App.deviceMode.label || "未连接设备"
                                     color: Theme.textMuted
-                                    font.pixelSize: 10
+                                    font.pixelSize: Theme.fs(10)
                                 }
                                 Rectangle { width: 1; height: 12; color: Theme.divider }
                                 Text {
                                     text: App.activeTasks.length > 0 ? "任务 " + App.activeTasks.length : "就绪"
                                     color: App.activeTasks.length > 0 ? Theme.accent : Theme.textMuted
-                                    font.pixelSize: 10
+                                    font.pixelSize: Theme.fs(10)
                                 }
                             }
 
@@ -642,27 +723,27 @@ Window {
                     Text {
                         text: "设备: " + (App.deviceInfo.serial || App.deviceInfo.model || "—")
                         color: Theme.textSub
-                        font.pixelSize: 10
+                        font.pixelSize: Theme.fs(10)
                     }
                     Text {
                         text: "BL: " + (App.deviceInfo.bootloader || "—")
                         color: Theme.textSub
-                        font.pixelSize: 10
+                        font.pixelSize: Theme.fs(10)
                     }
                     Text {
                         text: "槽位: " + (App.deviceInfo.slot || "—")
                         color: Theme.textSub
-                        font.pixelSize: 10
+                        font.pixelSize: Theme.fs(10)
                     }
                     Text {
                         text: "端口: " + App.flashPorts.length
                         color: Theme.textMuted
-                        font.pixelSize: 10
+                        font.pixelSize: Theme.fs(10)
                     }
                     Text {
                         text: "引导包: " + App.packets.packets.length
                         color: Theme.textMuted
-                        font.pixelSize: 10
+                        font.pixelSize: Theme.fs(10)
                     }
                 }
 
@@ -674,12 +755,12 @@ Window {
                     Text {
                         text: App.activeTasks.length > 0 ? "任务 " + App.activeTasks.length : "就绪"
                         color: App.activeTasks.length > 0 ? Theme.accent : Theme.textMuted
-                        font.pixelSize: 10
+                        font.pixelSize: Theme.fs(10)
                     }
                     Text {
                         text: "XMF v" + App.version
                         color: Theme.textMuted
-                        font.pixelSize: 10
+                        font.pixelSize: Theme.fs(10)
                     }
                 }
             }
@@ -752,8 +833,8 @@ Window {
 
         Rectangle {
             anchors.centerIn: parent
-            width: 400
-            height: 160
+            width: Math.min(parent.width - 48, 400)
+            height: Math.min(parent.height - 48, 160)
             radius: Theme.r6
             color: Theme.panel
             border.width: 1
@@ -766,13 +847,13 @@ Window {
                 Text {
                     text: "还有 " + App.activeTasks.length + " 个任务正在运行"
                     color: Theme.text
-                    font.pixelSize: 14
+                    font.pixelSize: Theme.fs(14)
                     font.weight: Font.DemiBold
                 }
                 Text {
                     text: "刷写过程中退出可能导致设备异常，确定要退出吗？"
                     color: Theme.textMuted
-                    font.pixelSize: 11
+                    font.pixelSize: Theme.fs(11)
                     wrapMode: Text.Wrap
                     width: parent.width
                 }
@@ -826,7 +907,7 @@ Window {
                     readOnly: true
                     wrapMode: TextArea.Wrap
                     color: Theme.text
-                    font.pixelSize: 12
+                    font.pixelSize: Theme.fs(12)
                     background: null
                     textFormat: TextEdit.PlainText
                     text: "XMF Flash Tool 仅供学习研究与个人设备维护使用。\n\n"
@@ -848,7 +929,7 @@ Window {
                 CheckBox {
                     id: agreeCheck
                     text: "我已阅读并同意以上免责声明"
-                    font.pixelSize: 11
+                    font.pixelSize: Theme.fs(11)
                     anchors.left: parent.left
                     anchors.verticalCenter: parent.verticalCenter
                 }
@@ -921,6 +1002,7 @@ Window {
     Component { id: spdflashComp; SpdFlashModePage { onBackRequested: win.popToConsole() } }
     Component { id: rkdevtoolComp; RkDevToolModePage { onBackRequested: win.popToConsole() } }
     Component { id: phoenixsuitComp; PhoenixSuitModePage { onBackRequested: win.popToConsole() } }
+    Component { id: amlogicComp; AmlogicBurnModePage { onBackRequested: win.popToConsole() } }
     Component { id: fastbootModeComp; FastbootModePage { onBackRequested: win.popToConsole() } }
     Component { id: recoveryModeComp; RecoveryModePage { onBackRequested: win.popToConsole() } }
     Component { id: qcomEdlComp; QualcommEdlModePage { onBackRequested: win.popToConsole() } }
@@ -952,7 +1034,7 @@ Window {
                 Text {
                     text: "永久免费声明"
                     color: Theme.text
-                    font.pixelSize: 22
+                    font.pixelSize: Theme.fs(22)
                     font.bold: true
                 }
                 Rectangle { width: parent.width; height: 2; color: Theme.accent }
@@ -960,7 +1042,7 @@ Window {
                     width: parent.width
                     text: App.freeNoticeText
                     color: Theme.textSub
-                    font.pixelSize: 12
+                    font.pixelSize: Theme.fs(12)
                     lineHeight: 1.45
                     wrapMode: Text.WordWrap
                 }
@@ -969,7 +1051,7 @@ Window {
                     width: parent.width
                     text: "此弹窗每次启动都会显示，必须确认后才能继续使用。"
                     color: Theme.warning
-                    font.pixelSize: 11
+                    font.pixelSize: Theme.fs(11)
                 }
                 Row {
                     width: parent.width
@@ -1007,7 +1089,7 @@ Window {
 
         Rectangle {
             width: Math.min(460, parent.width - 48)
-            height: 220
+            height: Math.min(parent.height - 48, 220)
             anchors.centerIn: parent
             radius: 12
             color: Theme.panel
@@ -1022,21 +1104,21 @@ Window {
                 Text {
                     text: "发现新版本"
                     color: Theme.text
-                    font.pixelSize: 17
+                    font.pixelSize: Theme.fs(17)
                     font.bold: true
                 }
                 Text {
                     width: parent.width
                     text: "当前版本 " + App.version + "，最新版本 " + App.latestVersion + "。"
                     color: Theme.textSub
-                    font.pixelSize: 12
+                    font.pixelSize: Theme.fs(12)
                     wrapMode: Text.WordWrap
                 }
                 Text {
                     width: parent.width
                     text: "建议前往 GitHub Release 下载最新安装包。"
                     color: Theme.textMuted
-                    font.pixelSize: 11
+                    font.pixelSize: Theme.fs(11)
                     wrapMode: Text.WordWrap
                 }
                 Item { width: 1; height: 4 }
@@ -1072,7 +1154,7 @@ Window {
 
         Rectangle {
             width: Math.min(460, parent.width - 48)
-            height: 210
+            height: Math.min(parent.height - 48, 210)
             anchors.centerIn: parent
             radius: 12
             color: Theme.panel
@@ -1087,14 +1169,14 @@ Window {
                 Text {
                     text: "无法查询最新版本"
                     color: Theme.text
-                    font.pixelSize: 17
+                    font.pixelSize: Theme.fs(17)
                     font.bold: true
                 }
                 Text {
                     width: parent.width
                     text: "请点击下方按钮前往 GitHub 查询最新版本。"
                     color: Theme.textSub
-                    font.pixelSize: 12
+                    font.pixelSize: Theme.fs(12)
                     wrapMode: Text.WordWrap
                 }
                 Item { width: 1; height: 6 }

@@ -44,7 +44,7 @@ Item {
             Layout.alignment: Qt.AlignVCenter
             text: root.label
             color: Theme.textSub
-            font.pixelSize: 11
+            font.pixelSize: Theme.fs(11)
             elide: Text.ElideRight
         }
 
@@ -53,7 +53,7 @@ Item {
             visible: root.detail !== ""
             text: root.detail
             color: root.stateName === "idle" ? Theme.textMuted : root.lampColor
-            font.pixelSize: 10
+            font.pixelSize: Theme.fs(10)
         }
     }
 }

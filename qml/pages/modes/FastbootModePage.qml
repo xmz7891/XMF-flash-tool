@@ -73,7 +73,7 @@ Item {
 
         Row {
             width: parent.width
-            height: 150
+            height: Math.max(132, Math.min(178, page.height * 0.22))
             spacing: 12
 
             GlassSurface {
@@ -91,7 +91,7 @@ Item {
                         visible: App.fastbootDevices.length === 0
                         text: "未检测到 Fastboot 设备。\n关机后按住 音量- + 电源（多数机型）进入 Bootloader。"
                         color: Theme.textMuted
-                        font.pixelSize: 11
+                        font.pixelSize: Theme.fs(11)
                         wrapMode: Text.Wrap
                     }
 
@@ -114,7 +114,7 @@ Item {
                             Text {
                                 text: modelData.serial || ""
                                 color: Theme.text
-                                font.pixelSize: 11
+                                font.pixelSize: Theme.fs(11)
                                 font.family: "Consolas"
                                 anchors.verticalCenter: parent.verticalCenter
                             }
@@ -123,7 +123,7 @@ Item {
                                       + " · 槽位 " + (App.deviceInfo.slot || "—")
                                       + " · 电量 " + (App.deviceInfo.battery || "—") + " mV"
                                 color: App.deviceInfo.batteryOk === false ? Theme.danger : Theme.textMuted
-                                font.pixelSize: 10
+                                font.pixelSize: Theme.fs(10)
                                 anchors.verticalCenter: parent.verticalCenter
                             }
                         }
@@ -143,7 +143,7 @@ Item {
                     Text {
                         width: parent.width
                         color: Theme.textSub
-                        font.pixelSize: 11
+                        font.pixelSize: Theme.fs(11)
                         wrapMode: Text.Wrap
                         text: "• Fastboot：解锁 BL 后由 bootloader 提供的分区刷写协议，刷 boot / recovery / vbmeta 等。\n"
                               + "• 9008(EDL)：高通芯片的紧急下载模式，走 Sahara + Firehose，需要 programmer 文件。\n"
@@ -152,7 +152,7 @@ Item {
                     Text {
                         width: parent.width
                         color: Theme.textMuted
-                        font.pixelSize: 10
+                        font.pixelSize: Theme.fs(10)
                         wrapMode: Text.Wrap
                         text: "未解锁 BL 时 fastboot 会拒绝刷写；大包官方固件请用 MiFlash 工作台。"
                     }
@@ -177,7 +177,7 @@ Item {
                         id: partTitle
                         text: "分区表"
                         color: Theme.text
-                        font.pixelSize: 13
+                        font.pixelSize: Theme.fs(13)
                         font.weight: Font.DemiBold
                         anchors.left: parent.left
                         anchors.verticalCenter: parent.verticalCenter
@@ -186,7 +186,7 @@ Item {
                         text: page.partitions.length > 0
                               ? page.partitions.length + " 个分区 · " + page.tableSubtitle : ""
                         color: Theme.textMuted
-                        font.pixelSize: 10
+                        font.pixelSize: Theme.fs(10)
                         anchors.left: partTitle.right
                         anchors.leftMargin: 10
                         anchors.verticalCenter: parent.verticalCenter
@@ -258,10 +258,10 @@ Item {
                 Row {
                     width: parent.width
                     height: 20
-                    Text { width: parent.width * 0.34; text: "名称"; color: Theme.textMuted; font.pixelSize: 10 }
-                    Text { width: parent.width * 0.22; text: "大小"; color: Theme.textMuted; font.pixelSize: 10 }
-                    Text { width: parent.width * 0.22; text: "地址"; color: Theme.textMuted; font.pixelSize: 10 }
-                    Text { width: parent.width * 0.22; text: "类型"; color: Theme.textMuted; font.pixelSize: 10 }
+                    Text { width: parent.width * 0.34; text: "名称"; color: Theme.textMuted; font.pixelSize: Theme.fs(10) }
+                    Text { width: parent.width * 0.22; text: "大小"; color: Theme.textMuted; font.pixelSize: Theme.fs(10) }
+                    Text { width: parent.width * 0.22; text: "地址"; color: Theme.textMuted; font.pixelSize: Theme.fs(10) }
+                    Text { width: parent.width * 0.22; text: "类型"; color: Theme.textMuted; font.pixelSize: Theme.fs(10) }
                 }
 
                 ListView {
@@ -289,7 +289,7 @@ Item {
                                 width: parent.width * 0.34
                                 text: modelData.name || ""
                                 color: Theme.text
-                                font.pixelSize: 10
+                                font.pixelSize: Theme.fs(10)
                                 elide: Text.ElideRight
                                 anchors.verticalCenter: parent.verticalCenter
                             }
@@ -297,21 +297,21 @@ Item {
                                 width: parent.width * 0.22
                                 text: modelData.sizeText || "—"
                                 color: Theme.textSub
-                                font.pixelSize: 10
+                                font.pixelSize: Theme.fs(10)
                                 anchors.verticalCenter: parent.verticalCenter
                             }
                             Text {
                                 width: parent.width * 0.22
                                 text: modelData.address || "—"
                                 color: Theme.textMuted
-                                font.pixelSize: 10
+                                font.pixelSize: Theme.fs(10)
                                 anchors.verticalCenter: parent.verticalCenter
                             }
                             Text {
                                 width: parent.width * 0.22
                                 text: modelData.region || "raw"
                                 color: Theme.textMuted
-                                font.pixelSize: 10
+                                font.pixelSize: Theme.fs(10)
                                 anchors.verticalCenter: parent.verticalCenter
                             }
                         }

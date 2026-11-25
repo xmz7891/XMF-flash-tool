@@ -92,7 +92,7 @@ Item {
                         anchors.centerIn: parent
                         text: modelData.name
                         color: page.category === modelData.id ? Theme.accent : Theme.textSub
-                        font.pixelSize: 11
+                        font.pixelSize: Theme.fs(11)
                     }
                     MouseArea {
                         id: tabMouse
@@ -118,11 +118,11 @@ Item {
                 anchors.rightMargin: 8
                 spacing: 8
                 Text { width: 22; text: "" }
-                Text { width: Math.min(220, parent.width * 0.22); text: "工具"; color: Theme.textMuted; font.pixelSize: 11; anchors.verticalCenter: parent.verticalCenter }
-                Text { width: parent.width - Math.min(220, parent.width * 0.22) - 250; text: "说明"; color: Theme.textMuted; font.pixelSize: 11; anchors.verticalCenter: parent.verticalCenter }
-                Text { width: 56; text: "状态"; color: Theme.textMuted; font.pixelSize: 11; anchors.verticalCenter: parent.verticalCenter }
+                Text { width: Math.min(220, parent.width * 0.22); text: "工具"; color: Theme.textMuted; font.pixelSize: Theme.fs(11); anchors.verticalCenter: parent.verticalCenter }
+                Text { width: parent.width - Math.min(220, parent.width * 0.22) - 250; text: "说明"; color: Theme.textMuted; font.pixelSize: Theme.fs(11); anchors.verticalCenter: parent.verticalCenter }
+                Text { width: 56; text: "状态"; color: Theme.textMuted; font.pixelSize: Theme.fs(11); anchors.verticalCenter: parent.verticalCenter }
                 Item { width: 30; height: 1 }
-                Text { text: "操作"; color: Theme.textMuted; font.pixelSize: 11; anchors.verticalCenter: parent.verticalCenter }
+                Text { text: "操作"; color: Theme.textMuted; font.pixelSize: Theme.fs(11); anchors.verticalCenter: parent.verticalCenter }
             }
         }
 

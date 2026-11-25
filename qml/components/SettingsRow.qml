@@ -33,7 +33,7 @@ Item {
                 width: parent.width
                 text: root.title
                 color: Theme.text
-                font.pixelSize: 13
+                font.pixelSize: Theme.fs(13)
                 font.weight: Font.DemiBold
                 elide: Text.ElideRight
             }
@@ -41,7 +41,7 @@ Item {
                 width: parent.width
                 text: root.desc
                 color: Theme.textMuted
-                font.pixelSize: 11
+                font.pixelSize: Theme.fs(11)
                 elide: Text.ElideRight
                 visible: root.desc.length > 0
             }

@@ -64,6 +64,9 @@ int main(int argc, char* argv[])
                                     QStringLiteral("ms"), QStringLiteral("1200"));
     QCommandLineOption pageOpt(QStringLiteral("page"), QStringLiteral("Open a page by nav index before running"),
                                QStringLiteral("index"));
+    QCommandLineOption windowSizeOpt(QStringLiteral("window-size"),
+                                     QStringLiteral("Window size WxH for layout regression"),
+                                     QStringLiteral("WxH"));
     QCommandLineOption themeOpt(QStringLiteral("theme"), QStringLiteral("Force appearance: dark or light"),
                                 QStringLiteral("mode"));
     QCommandLineOption modeOpt(QStringLiteral("mode"), QStringLiteral("Open a built-in workbench: miflash|spflash|spdflash|rkdevtool|phoenixsuit"),
@@ -111,6 +114,7 @@ int main(int argc, char* argv[])
     parser.addOption(shotOpt);
     parser.addOption(shotDelayOpt);
     parser.addOption(pageOpt);
+    parser.addOption(windowSizeOpt);
     parser.addOption(themeOpt);
     parser.addOption(modeOpt);
     parser.addOption(embedOpt);
@@ -344,6 +348,15 @@ int main(int argc, char* argv[])
             native::applyGlass(window, controller.darkTheme());
         });
 
+        if (parser.isSet(windowSizeOpt)) {
+            const QStringList parts = parser.value(windowSizeOpt).split(QLatin1Char('x'));
+            if (parts.size() == 2) {
+                const int w = parts.at(0).toInt();
+                const int h = parts.at(1).toInt();
+                if (w > 400 && h > 300)
+                    QTimer::singleShot(80, window, [window, w, h]() { window->resize(w, h); });
+            }
+        }
         if (parser.isSet(flashModeOpt)) {
             const QString modeId = parser.value(flashModeOpt);
             QTimer::singleShot(120, window, [window, modeId]() {

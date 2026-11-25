@@ -104,7 +104,7 @@ Item {
                 anchors.verticalCenter: parent.verticalCenter
                 text: sheet.toolData.name || "运行工具"
                 color: Theme.text
-                font.pixelSize: 12
+                font.pixelSize: Theme.fs(12)
                 font.weight: Font.DemiBold
             }
             Text {
@@ -115,7 +115,7 @@ Item {
                 width: parent.width - 40
                 text: sheet.toolData.desc || ""
                 color: Theme.textMuted
-                font.pixelSize: 10
+                font.pixelSize: Theme.fs(10)
                 elide: Text.ElideRight
             }
             Item {
@@ -155,7 +155,7 @@ Item {
                             text: (fieldColumn.f.label || fieldColumn.f.key)
                                   + (fieldColumn.f.required === true ? " *" : "")
                             color: fieldColumn.f.required === true ? Theme.text : Theme.textSub
-                            font.pixelSize: 11
+                            font.pixelSize: Theme.fs(11)
                         }
 
                         // bool
@@ -170,7 +170,7 @@ Item {
                             Text {
                                 text: sheet.values[fieldColumn.f.key] ? "是" : "否"
                                 color: Theme.textMuted
-                                font.pixelSize: 11
+                                font.pixelSize: Theme.fs(11)
                                 anchors.verticalCenter: parent.verticalCenter
                             }
                         }
@@ -184,7 +184,7 @@ Item {
                             model: fieldColumn.f.options || []
                             currentIndex: Math.max(0, (fieldColumn.f.options || []).indexOf(sheet.values[fieldColumn.f.key]))
                             onActivated: sheet.setValue(fieldColumn.f.key, currentText)
-                            font.pixelSize: 11
+                            font.pixelSize: Theme.fs(11)
                             background: Rectangle {
                                 radius: Theme.r10
                                 color: Theme.panel
@@ -195,7 +195,7 @@ Item {
                                 leftPadding: 6
                                 text: combo.displayText
                                 color: Theme.text
-                                font.pixelSize: 11
+                                font.pixelSize: Theme.fs(11)
                                 verticalAlignment: Text.AlignVCenter
                             }
                             indicator: null
@@ -221,7 +221,7 @@ Item {
                                     anchors.leftMargin: 6
                                     anchors.rightMargin: 6
                                     color: Theme.text
-                                    font.pixelSize: 11
+                                    font.pixelSize: Theme.fs(11)
                                     selectByMouse: true
                                     background: null
                                     placeholderText: fieldColumn.f.type === "path" ? "选择文件…"
@@ -255,7 +255,7 @@ Item {
                             visible: (fieldColumn.f.hint || "") !== ""
                             text: fieldColumn.f.hint || ""
                             color: Theme.textMuted
-                            font.pixelSize: 10
+                            font.pixelSize: Theme.fs(10)
                             wrapMode: Text.WordWrap
                             width: parent.width
                         }
@@ -313,7 +313,7 @@ Item {
                 anchors.verticalCenter: parent.verticalCenter
                 text: sheet.toolData.id || ""
                 color: Theme.textMuted
-                font.pixelSize: 10
+                font.pixelSize: Theme.fs(10)
             }
         }
     }

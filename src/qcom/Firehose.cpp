@@ -56,11 +56,11 @@ QString buildConfigureXml(const StorageConfig& config)
                "MaxPayloadSizeToTargetInBytesSupported=\"%4\" ZlpAwareHost=\"%5\" "
                "SkipStorageInit=\"%6\" />")
         .arg(xmlEscape(config.memoryName))
-        .arg(config.verbose ? QStringLiteral("true") : QStringLiteral("false"))
-        .arg(config.alwaysValidate ? QStringLiteral("true") : QStringLiteral("false"))
+        .arg(config.verbose ? 1 : 0)
+        .arg(config.alwaysValidate ? 1 : 0)
         .arg(config.maxPayloadBytes)
         .arg(config.zlpAwareHost ? 1 : 0)
-        .arg(config.skipStorageInit ? QStringLiteral("true") : QStringLiteral("false"));
+        .arg(config.skipStorageInit ? 1 : 0);
 }
 
 QString buildReadXml(const QString& storageType, int physicalPartition, quint64 startSector,
@@ -69,7 +69,7 @@ QString buildReadXml(const QString& storageType, int physicalPartition, quint64 
     Q_UNUSED(storageType); // storage is selected by <configure MemoryName="...">
     return QStringLiteral(
                "<read SECTOR_SIZE_IN_BYTES=\"%1\" physical_partition_number=\"%2\" "
-               "start_sector=\"%3\" num_sectors=\"%4\" />")
+               "start_sector=\"%3\" num_partition_sectors=\"%4\" />")
         .arg(sectorSize)
         .arg(physicalPartition)
         .arg(startSector)
@@ -83,7 +83,7 @@ QString buildProgramXml(const QString& storageType, int physicalPartition, quint
     return QStringLiteral(
                "<program SECTOR_SIZE_IN_BYTES=\"%1\" filename=\"%2\" "
                "physical_partition_number=\"%3\" start_sector=\"%4\" "
-               "num_partial_sectors=\"%5\" />")
+               "num_partition_sectors=\"%5\" />")
         .arg(sectorSize)
         .arg(xmlEscape(filename))
         .arg(physicalPartition)
@@ -97,7 +97,7 @@ QString buildEraseXml(const QString& storageType, int physicalPartition, quint64
     Q_UNUSED(storageType);
     return QStringLiteral(
                "<erase SECTOR_SIZE_IN_BYTES=\"%1\" physical_partition_number=\"%2\" "
-               "start_sector=\"%3\" num_sectors=\"%4\" />")
+               "start_sector=\"%3\" num_partition_sectors=\"%4\" />")
         .arg(sectorSize)
         .arg(physicalPartition)
         .arg(startSector)
@@ -204,6 +204,20 @@ QString Client::readResponseXml(int timeoutMs)
         if (raw.size() > 2 * 1024 * 1024)
             break; // runaway device, let the parser report a broken response
     }
+    // A serial read often returns the XML response and the beginning of the
+    // raw payload in the same buffer. Preserve everything after the enclosing
+    // </data> so the following readExact() does not lose image bytes.
+    const int responseAt = raw.indexOf("<response");
+    if (responseAt >= 0) {
+        const int tagEnd = raw.indexOf('>', responseAt);
+        const int dataEnd = tagEnd >= 0 ? raw.indexOf("</data>", tagEnd) : -1;
+        if (dataEnd >= 0) {
+            const int packetEnd = dataEnd + 7;
+            if (packetEnd < raw.size())
+                m_rx.prepend(raw.mid(packetEnd));
+            raw.truncate(packetEnd);
+        }
+    }
     return QString::fromUtf8(raw);
 }
 
@@ -248,6 +262,19 @@ Response Client::nop(int timeoutMs)
     return sendCommand(QStringLiteral("<nop />"), timeoutMs);
 }
 
+QByteArray Client::readRawExact(qint64 size, int timeoutMs)
+{
+    QByteArray out;
+    if (!m_rx.isEmpty()) {
+        const qint64 take = qMin<qint64>(size, m_rx.size());
+        out.append(m_rx.left(int(take)));
+        m_rx.remove(0, int(take));
+    }
+    if (out.size() < size)
+        out.append(usb::readExact(m_transport, size - out.size(), timeoutMs, m_reporter));
+    return out;
+}
+
 Response Client::readSectors(const QString& storageType, int physicalPartition,
                              quint64 startSector, quint64 numSectors, int sectorSize,
                              QByteArray* out, int timeoutMs, bool trailingAck)
@@ -261,14 +288,69 @@ Response Client::readSectors(const QString& storageType, int physicalPartition,
                           .arg(numSectors)
                           .arg(startSector)
                           .arg(sectorSize));
-    Response response = sendCommand(
-        buildReadXml(storageType, physicalPartition, startSector, numSectors, sectorSize),
-        timeoutMs);
-    if (!response.ok())
-        return response;
+    const QString xml = wrapCommand(
+        buildReadXml(storageType, physicalPartition, startSector, numSectors, sectorSize));
+    m_reporter.debug(QStringLiteral("Firehose → %1").arg(xml));
+    // Discard any XML/ACK bytes left in the transport or in our reassembly
+    // buffer from the previous command. Otherwise a stale `<response>` can be
+    // mistaken for this read's ACK and become the first bytes of the image.
+    m_rx.clear();
+    usb::drainInput(m_transport, 300);
+    usb::writeAll(m_transport, xml.toUtf8(), timeoutMs, m_reporter);
 
+    // Firehose <read> sends an XML ACK with rawmode="true" and then the raw
+    // payload, often in the same serial/USB read as the ACK. Parse the ACK
+    // ourselves so no payload byte is swallowed by readResponseXml().
+    QByteArray accumulated;
+    QByteArray rawPrefix;
+    Response response;
     const qint64 expected = qint64(numSectors) * sectorSize;
-    QByteArray data = usb::readExact(m_transport, expected, timeoutMs, m_reporter);
+    while (true) {
+        QByteArray chunk = m_rx;
+        m_rx.clear();
+        if (chunk.isEmpty())
+            chunk = m_transport.read(64 * 1024, timeoutMs);
+        if (chunk.isEmpty()) {
+            response.error = QStringLiteral("Firehose 读取命令未收到 ACK");
+            return response;
+        }
+        accumulated.append(chunk);
+        const int responseAt = accumulated.indexOf("<response");
+        if (responseAt < 0)
+            continue;
+        const int tagEnd = accumulated.indexOf('>', responseAt);
+        if (tagEnd < 0)
+            continue;
+        const int dataEnd = accumulated.indexOf("</data>", tagEnd);
+        if (dataEnd < 0)
+            continue;
+        const QByteArray packet = accumulated.left(dataEnd + 7);
+        rawPrefix = accumulated.mid(dataEnd + 7);
+        response = parseResponseXml(QString::fromUtf8(packet));
+        for (const auto& log : response.logs)
+            m_reporter.debug(QStringLiteral("Firehose ← %1").arg(log));
+        if (!response.ok())
+            return response;
+        break;
+    }
+
+    m_rx = rawPrefix;
+    QByteArray data = readRawExact(expected, timeoutMs);
+    // Some programmers send the XML ACK again immediately before the raw
+    // payload (or leave a trailing ACK that the next read picks up). Strip any
+    // complete leading XML response packet so a file never starts with `<?xml`.
+    while (data.startsWith("<?xml") || data.startsWith("<data>")) {
+        const int end = data.indexOf("</data>");
+        if (end < 0)
+            break;
+        if (!data.left(end).contains("<response"))
+            break;
+        data.remove(0, end + 7);
+    }
+    if (data.size() < expected)
+        data.append(usb::readExact(m_transport, expected - data.size(), timeoutMs));
+    if (data.size() > expected)
+        data.truncate(expected);
     if (out)
         *out = data;
     else

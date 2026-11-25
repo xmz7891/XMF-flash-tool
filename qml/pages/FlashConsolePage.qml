@@ -24,6 +24,40 @@ Item {
     property bool preflightOpen: false
     property string preflightAction: "write"
     property bool preflightScanning: false
+    property string lastAutoModeKey: ""
+
+    function autoModeId() {
+        const mode = String(App.deviceMode.mode || "")
+        const platform = String(App.deviceMode.platform || "qcom")
+        if (mode === "fastboot") return "fastboot:" + platform
+        if (mode === "sideload") return "recovery:" + platform
+        if (mode === "edl9008") return "qcom-edl"
+        if (mode === "mtk-brom") return "spflash"
+        if (mode === "sprd-fdl") return "spdflash"
+        if (mode === "rk-maskrom") return "rkdevtool"
+        if (mode === "aw-fel") return "phoenixsuit"
+        if (mode === "amlogic-burn") return "amlogic-burn"
+        return ""
+    }
+
+    function maybeAutoMode() {
+        if (!page.visible || !App.settings.get("ui/autoSwitchMode", true))
+            return
+        if (page.activeTask || page.preflightOpen)
+            return
+        const id = page.autoModeId()
+        if (id === "" || id === page.lastAutoModeKey)
+            return
+        page.lastAutoModeKey = id
+        Qt.callLater(function() { if (page.visible) page.openMode(id) })
+    }
+
+    Component.onCompleted: Qt.callLater(page.maybeAutoMode)
+
+    Connections {
+        target: App
+        function onDeviceModeChanged() { page.maybeAutoMode() }
+    }
 
     readonly property var preflightRows: page.buildPreflight()
 
@@ -231,12 +265,12 @@ Item {
 
         Row {
             width: parent.width
-            height: parent.height - 220
+            height: Math.max(180, parent.height - guidePanel.height - 70)
             spacing: 0
 
             // ------------------------------------------------ partition area
             GlassSurface {
-                width: parent.width - 336
+                width: parent.width - logPanel.width
                 height: parent.height
                 radius: 0
                 title: "分区表"
@@ -265,7 +299,7 @@ Item {
                                 anchors.rightMargin: 8
                                 placeholderText: "请输入分区名称筛选…"
                                 color: Theme.text
-                                font.pixelSize: 11
+                                font.pixelSize: Theme.fs(11)
                                 background: null
                                 selectByMouse: true
                                 onTextChanged: page.search = text
@@ -315,10 +349,10 @@ Item {
                                 onToggled: function(value) { page.setAllSelected(value) }
                             }
                         }
-                        Text { width: parent.width * 0.30; text: "分区"; color: Theme.textMuted; font.pixelSize: 10 }
-                        Text { width: parent.width * 0.15; text: "大小"; color: Theme.textMuted; font.pixelSize: 10 }
-                        Text { width: parent.width * 0.15; text: "操作"; color: Theme.textMuted; font.pixelSize: 10 }
-                        Text { width: parent.width * 0.36; text: "文件路径（双击选择镜像）"; color: Theme.textMuted; font.pixelSize: 10 }
+                        Text { width: parent.width * 0.30; text: "分区"; color: Theme.textMuted; font.pixelSize: Theme.fs(10) }
+                        Text { width: parent.width * 0.15; text: "大小"; color: Theme.textMuted; font.pixelSize: Theme.fs(10) }
+                        Text { width: parent.width * 0.15; text: "操作"; color: Theme.textMuted; font.pixelSize: Theme.fs(10) }
+                        Text { width: parent.width * 0.36; text: "文件路径（双击选择镜像）"; color: Theme.textMuted; font.pixelSize: Theme.fs(10) }
                     }
 
                     Item {
@@ -376,7 +410,7 @@ Item {
                                         width: parent.width * 0.30 - 18
                                         text: modelData.name
                                         color: Theme.text
-                                        font.pixelSize: 11
+                                        font.pixelSize: Theme.fs(11)
                                         elide: Text.ElideRight
                                         anchors.verticalCenter: parent.verticalCenter
                                         leftPadding: 6
@@ -385,21 +419,21 @@ Item {
                                         width: parent.width * 0.15
                                         text: modelData.sizeText
                                         color: Theme.textSub
-                                        font.pixelSize: 10
+                                        font.pixelSize: Theme.fs(10)
                                         anchors.verticalCenter: parent.verticalCenter
                                     }
                                     Text {
                                         width: parent.width * 0.15
                                         text: modelData.file.length > 0 ? "已选择" : "选择…"
                                         color: modelData.file.length > 0 ? Theme.success : Theme.accent
-                                        font.pixelSize: 10
+                                        font.pixelSize: Theme.fs(10)
                                         anchors.verticalCenter: parent.verticalCenter
                                     }
                                     Text {
                                         width: parent.width * 0.36
                                         text: modelData.file.length > 0 ? modelData.file : "双击选择镜像"
                                         color: modelData.file.length > 0 ? Theme.text : Theme.textMuted
-                                        font.pixelSize: 10
+                                        font.pixelSize: Theme.fs(10)
                                         elide: Text.ElideMiddle
                                         anchors.verticalCenter: parent.verticalCenter
                                     }
@@ -435,13 +469,13 @@ Item {
                                 Text {
                                     text: "未读取分区表"
                                     color: Theme.text
-                                    font.pixelSize: 12
+                                    font.pixelSize: Theme.fs(12)
                                     font.weight: Font.DemiBold
                                 }
                                 Text {
                                     text: "连接 Fastboot 或开启 ADB 调试后读取；也可把固件 / 镜像拖入本页。"
                                     color: Theme.textMuted
-                                    font.pixelSize: 10
+                                    font.pixelSize: Theme.fs(10)
                                 }
                             }
                             Item { width: Math.max(0, parent.width - 620); height: 1 }
@@ -459,7 +493,8 @@ Item {
 
             // ------------------------------------------------------- log panel
             GlassSurface {
-                width: 330
+                id: logPanel
+                width: Math.max(280, Math.min(420, parent.width * 0.28))
                 height: parent.height
                 radius: 0
                 title: "执行日志"
@@ -488,7 +523,7 @@ Item {
                                 width: 62
                                 text: model.time
                                 color: Theme.textMuted
-                                font.pixelSize: 9
+                                font.pixelSize: Theme.fs(9)
                                 font.family: "Consolas"
                                 elide: Text.ElideRight
                             }
@@ -496,7 +531,7 @@ Item {
                                 width: parent.width - 70
                                 text: model.message
                                 color: model.level >= 3 ? Theme.danger : (model.level === 2 ? Theme.warning : Theme.textSub)
-                                font.pixelSize: 10
+                                font.pixelSize: Theme.fs(10)
                                 font.family: "Consolas"
                                 elide: Text.ElideRight
                             }
@@ -527,8 +562,10 @@ Item {
 
         // ------------------------------------------------ guide / firmware
         GlassSurface {
+            id: guidePanel
             width: parent.width
-            height: 140
+            height: Math.max(150, Math.min(176, parent.height * 0.24))
+            Behavior on height { NumberAnimation { duration: Theme.animations ? 180 : 0; easing.type: Easing.OutCubic } }
             title: "引导与固件"
             hint: "免授权引导文件 / 线刷包"
 
@@ -541,7 +578,7 @@ Item {
                     width: parent.width
                     height: 26
                     spacing: 6
-                    Text { width: 70; text: "引导文件"; color: Theme.textMuted; font.pixelSize: 10; anchors.verticalCenter: parent.verticalCenter }
+                    Text { width: 70; text: "引导文件"; color: Theme.textMuted; font.pixelSize: Theme.fs(10); anchors.verticalCenter: parent.verticalCenter }
                     Rectangle {
                         width: parent.width - 330
                         height: 26
@@ -555,7 +592,7 @@ Item {
                             anchors.rightMargin: 8
                             text: App.guideFile.length > 0 ? App.guideFile : "未选择（本地文件或引导包提取）"
                             color: App.guideFile.length > 0 ? Theme.text : Theme.textMuted
-                            font.pixelSize: 10
+                            font.pixelSize: Theme.fs(10)
                             font.family: "Consolas"
                             elide: Text.ElideMiddle
                             verticalAlignment: Text.AlignVCenter
@@ -569,7 +606,7 @@ Item {
                     width: parent.width
                     height: 26
                     spacing: 6
-                    Text { width: 70; text: "线刷包"; color: Theme.textMuted; font.pixelSize: 10; anchors.verticalCenter: parent.verticalCenter }
+                    Text { width: 70; text: "线刷包"; color: Theme.textMuted; font.pixelSize: Theme.fs(10); anchors.verticalCenter: parent.verticalCenter }
                     Rectangle {
                         width: parent.width - 330
                         height: 26
@@ -583,7 +620,7 @@ Item {
                             anchors.rightMargin: 8
                             text: page.selectedFile.length > 0 ? page.selectedFile : "选择 tgz / pac / img，或直接拖入窗口"
                             color: page.selectedFile.length > 0 ? Theme.text : Theme.textMuted
-                            font.pixelSize: 10
+                            font.pixelSize: Theme.fs(10)
                             font.family: "Consolas"
                             elide: Text.ElideMiddle
                             verticalAlignment: Text.AlignVCenter
@@ -630,7 +667,7 @@ Item {
             Text {
                 text: page.activeTask ? (page.activeTask.title + " · " + page.activeTask.progress + "%") : "当前操作：无"
                 color: Theme.textMuted
-                font.pixelSize: 10
+                font.pixelSize: Theme.fs(10)
                 anchors.verticalCenter: parent.verticalCenter
                 width: 220
                 elide: Text.ElideRight
@@ -666,7 +703,7 @@ Item {
             Text {
                 text: page.activeTask ? page.activeTask.status : "就绪"
                 color: Theme.textMuted
-                font.pixelSize: 10
+                font.pixelSize: Theme.fs(10)
                 anchors.verticalCenter: parent.verticalCenter
                 width: 110
                 elide: Text.ElideRight
@@ -674,7 +711,7 @@ Item {
             Text {
                 text: "0.0 MB/s"
                 color: Theme.textMuted
-                font.pixelSize: 10
+                font.pixelSize: Theme.fs(10)
                 anchors.verticalCenter: parent.verticalCenter
             }
         }
@@ -777,7 +814,7 @@ Item {
                     width: parent.width
                     text: "将擦除已勾选的 " + page.selectedRows.length + " 个分区，数据无法恢复。"
                     color: Theme.text
-                    font.pixelSize: 12
+                    font.pixelSize: Theme.fs(12)
                     wrapMode: Text.Wrap
                 }
                 Row {
@@ -811,8 +848,8 @@ Item {
         id: preflightCard
         anchors.centerIn: parent
         visible: page.preflightOpen
-        width: 840
-        height: 620
+        width: Math.min(parent.width - 56, 840)
+        height: Math.min(parent.height - 56, 620)
         radius: 12
         color: Theme.panel
         border.width: 1
@@ -830,7 +867,7 @@ Item {
                 Text {
                     text: page.preflightAction === "erase" ? "执行前检测 · 擦除分区" : "执行前检测 · 写入分区"
                     color: Theme.text
-                    font.pixelSize: 17
+                    font.pixelSize: Theme.fs(17)
                     font.bold: true
                     anchors.verticalCenter: parent.verticalCenter
                 }
@@ -838,7 +875,7 @@ Item {
                 Text {
                     text: page.preflightScanning ? "正在检测…" : "检测完成"
                     color: page.preflightScanning ? Theme.accent : Theme.success
-                    font.pixelSize: 11
+                    font.pixelSize: Theme.fs(11)
                     anchors.verticalCenter: parent.verticalCenter
                 }
             }
@@ -848,7 +885,7 @@ Item {
             Text {
                 text: "先确认下面这些状态，再执行任务。任何一项不满足都可能中断刷机。"
                 color: Theme.textSub
-                font.pixelSize: 11
+                font.pixelSize: Theme.fs(11)
             }
 
             Column {
@@ -878,14 +915,14 @@ Item {
                                 width: 112
                                 text: modelData.k
                                 color: Theme.textMuted
-                                font.pixelSize: 10
+                                font.pixelSize: Theme.fs(10)
                                 anchors.verticalCenter: parent.verticalCenter
                             }
                             Text {
                                 width: parent.width - 150
                                 text: modelData.v
                                 color: modelData.ok ? Theme.text : Theme.danger
-                                font.pixelSize: 10
+                                font.pixelSize: Theme.fs(10)
                                 elide: Text.ElideMiddle
                                 anchors.verticalCenter: parent.verticalCenter
                             }
@@ -900,7 +937,7 @@ Item {
                 width: parent.width
                 text: "注意：刷写/擦除会修改设备分区，请确认固件型号、槽位与电量，并提前备份数据。"
                 color: Theme.warning
-                font.pixelSize: 10
+                font.pixelSize: Theme.fs(10)
                 wrapMode: Text.WordWrap
             }
 

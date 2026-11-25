@@ -71,7 +71,7 @@ Item {
                         id: textItem
                         text: model.message
                         color: Theme.text
-                        font.pixelSize: 11
+                        font.pixelSize: Theme.fs(11)
                         anchors.verticalCenter: parent.verticalCenter
                         elide: Text.ElideRight
                         width: parent.width - 28

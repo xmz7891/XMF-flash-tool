@@ -27,6 +27,7 @@ add_library(gf_image STATIC
     MbnTools.cpp MbnTools.h
     OplusDigest.cpp OplusDigest.h
     QcomMapping.cpp QcomMapping.h
+    AmlogicImage.cpp AmlogicImage.h
 )
 target_include_directories(gf_image PUBLIC ${CMAKE_CURRENT_SOURCE_DIR} ${CMAKE_CURRENT_SOURCE_DIR}/..)
 target_link_libraries(gf_image PUBLIC gf_core Qt6::Core Qt6::Gui Qt6::Network)

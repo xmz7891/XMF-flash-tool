@@ -35,7 +35,7 @@ Rectangle {
         color: Theme.text
         placeholderText: root.placeholder
         placeholderTextColor: Theme.textMuted
-        font.pixelSize: 11
+        font.pixelSize: Theme.fs(11)
         selectByMouse: true
         background: null
         padding: 0

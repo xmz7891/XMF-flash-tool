@@ -44,7 +44,7 @@ Item {
         Text {
             text: root.text
             color: root.active ? Theme.text : Theme.textSub
-            font.pixelSize: 13
+            font.pixelSize: Theme.fs(13)
             font.weight: root.active ? Font.DemiBold : Font.Normal
             anchors.verticalCenter: parent.verticalCenter
         }
@@ -64,7 +64,7 @@ Item {
             anchors.centerIn: parent
             text: root.badge
             color: Theme.accent
-            font.pixelSize: 9
+            font.pixelSize: Theme.fs(9)
         }
     }
 

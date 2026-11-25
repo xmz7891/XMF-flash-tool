@@ -115,7 +115,7 @@ Item {
                         Text {
                             text: root.title
                             color: Theme.text
-                            font.pixelSize: 19
+                            font.pixelSize: Theme.fs(19)
                             font.weight: Font.DemiBold
                         }
                         Rectangle {
@@ -133,7 +133,7 @@ Item {
                                 anchors.centerIn: parent
                                 text: root.tag
                                 color: Theme.textMuted
-                                font.pixelSize: 9
+                                font.pixelSize: Theme.fs(9)
                                 font.weight: Font.DemiBold
                             }
                         }
@@ -143,7 +143,7 @@ Item {
                         width: parent.width
                         text: root.subtitle
                         color: Theme.textMuted
-                        font.pixelSize: 11
+                        font.pixelSize: Theme.fs(11)
                         elide: Text.ElideRight
                     }
                 }
@@ -188,7 +188,7 @@ Item {
                     Layout.alignment: Qt.AlignVCenter
                     text: root.firmwareLabel
                     color: Theme.textMuted
-                    font.pixelSize: 11
+                    font.pixelSize: Theme.fs(11)
                 }
 
                 Rectangle {
@@ -209,7 +209,7 @@ Item {
                         anchors.leftMargin: 12
                         anchors.rightMargin: 10
                         color: Theme.text
-                        font.pixelSize: 12
+                        font.pixelSize: Theme.fs(12)
                         selectByMouse: true
                         background: null
                         padding: 0
@@ -234,7 +234,7 @@ Item {
                         anchors.centerIn: parent
                         text: "已加载"
                         color: Theme.success
-                        font.pixelSize: 9
+                        font.pixelSize: Theme.fs(9)
                         font.weight: Font.DemiBold
                     }
                 }
@@ -314,7 +314,7 @@ Item {
                         horizontalAlignment: Text.AlignRight
                         text: root.indeterminate ? "…" : Math.round(root.progress) + "%"
                         color: Theme.textSub
-                        font.pixelSize: 11
+                        font.pixelSize: Theme.fs(11)
                         font.family: "Consolas"
                     }
 
@@ -324,7 +324,7 @@ Item {
                         horizontalAlignment: Text.AlignRight
                         text: root.speedText
                         color: Theme.textMuted
-                        font.pixelSize: 10
+                        font.pixelSize: Theme.fs(10)
                         font.family: "Consolas"
                         elide: Text.ElideRight
                     }
@@ -379,14 +379,14 @@ Item {
                         text: "设备代号 " + root.deviceCode + "     BL 状态 " + root.bootloaderText
                               + "     当前槽位 " + root.slotText
                         color: Theme.textMuted
-                        font.pixelSize: 10
+                        font.pixelSize: Theme.fs(10)
                         elide: Text.ElideRight
                     }
 
                     Text {
                         text: "工作台 · 刷写后端已接入（Fastboot）"
                         color: Theme.textMuted
-                        font.pixelSize: 10
+                        font.pixelSize: Theme.fs(10)
                     }
                 }
             }

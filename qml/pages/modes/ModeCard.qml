@@ -40,7 +40,7 @@ GlassSurface {
                 Layout.alignment: Qt.AlignVCenter
                 text: root.title
                 color: Theme.text
-                font.pixelSize: 13
+                font.pixelSize: Theme.fs(13)
                 font.weight: Font.DemiBold
                 elide: Text.ElideRight
             }
@@ -50,7 +50,7 @@ GlassSurface {
                 visible: root.subtitle !== ""
                 text: "· " + root.subtitle
                 color: Theme.textMuted
-                font.pixelSize: 10
+                font.pixelSize: Theme.fs(10)
                 elide: Text.ElideRight
                 Layout.maximumWidth: 300
             }
@@ -71,7 +71,7 @@ GlassSurface {
             Layout.preferredHeight: visible ? implicitHeight : 0
             text: root.hint
             color: Theme.textMuted
-            font.pixelSize: 10
+            font.pixelSize: Theme.fs(10)
             wrapMode: Text.WordWrap
             lineHeight: 1.35
         }

@@ -139,13 +139,13 @@ Item {
                         visible: table.count > 0
                         text: "全选"
                         color: table.allSelected ? Theme.text : Theme.textMuted
-                        font.pixelSize: 10
+                        font.pixelSize: Theme.fs(10)
                     },
                     Text {
                         visible: table.count > 0
                         text: table.selectedCount + " / " + table.count
                         color: Theme.accent
-                        font.pixelSize: 10
+                        font.pixelSize: Theme.fs(10)
                         font.family: "Consolas"
                     }
                 ]
@@ -175,7 +175,7 @@ Item {
 
             // ---- 右侧：FEL 状态 + 操作 + 日志
             Item {
-                Layout.preferredWidth: 330
+                Layout.preferredWidth: Math.max(300, Math.min(430, page.width * 0.27))
                 Layout.fillHeight: true
 
                 ColumnLayout {
@@ -184,7 +184,7 @@ Item {
 
                     ModeCard {
                         Layout.fillWidth: true
-                        Layout.preferredHeight: 136
+                        Layout.preferredHeight: Math.max(120, Math.min(154, page.height * 0.18))
                         title: "FEL 状态"
                         icon: "sun"
                         accentColor: page.modeColor
@@ -216,7 +216,7 @@ Item {
 
                     ModeCard {
                         Layout.fillWidth: true
-                        Layout.preferredHeight: 176
+                        Layout.preferredHeight: Math.max(150, Math.min(200, page.height * 0.23))
                         title: "操作"
                         icon: "sliders-horizontal"
                         accentColor: page.modeColor
@@ -281,7 +281,7 @@ RowLayout {
                                     Layout.alignment: Qt.AlignVCenter
                                     text: "刷机完成后自动重启"
                                     color: Theme.textSub
-                                    font.pixelSize: 10
+                                    font.pixelSize: Theme.fs(10)
                                     elide: Text.ElideRight
                                 }
                                 ToggleSwitch {

@@ -4,6 +4,7 @@ add_library(gf_qcom STATIC
     QcomRegister.cpp QcomTools.cpp QcomTools.h
     Elf.cpp Elf.h
     Sahara.cpp Sahara.h
+    QedlBootstrap.cpp QedlBootstrap.h
     Firehose.cpp Firehose.h
 )
 target_include_directories(gf_qcom PUBLIC ${CMAKE_CURRENT_SOURCE_DIR} ${CMAKE_CURRENT_SOURCE_DIR}/..)

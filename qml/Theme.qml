@@ -11,6 +11,10 @@ QtObject {
 
     // ---- motion -----------------------------------------------------------
     property bool animations: true
+    // Window-aware type scale: 1.0 at the 1180x760 reference size, shrinks
+    // (never grows) for smaller windows so labels keep their breathing room.
+    property real uiScale: 1.0
+    function fs(size) { return Math.max(8, Math.round(size * uiScale)) }
     readonly property int durFast: animations ? 110 : 0
     readonly property int durNormal: animations ? 180 : 0
     readonly property int durSlow: animations ? 260 : 0

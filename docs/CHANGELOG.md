@@ -1,3 +1,15 @@
+## v0.4.0
+
+- Qualcomm 9008 真机链路修复：识别 eMMC 512 / UFS 4096，自动探测 GPT 扇区并修正读写
+- 内置开源 qedl 后端（baiyao105/qedl-rs），进入 9008 后自动上传 Sahara loader
+- 修复 Firehose read 的 ACK/原始数据分包，分区读取不再写入 XML ACK 或全零
+- 分区恢复写入改为 4096 字节分块，恢复后 SHA256 可校验通过
+- 新增 9008 工作台：GPT、LUN 分组、XML 加载/生成、镜像目录匹配、备份/恢复/擦除/重启
+- 新增 Amlogic 平台识别、USB Burning 工作台、镜像解析/解包/重打包、update.exe 后端与 Zadig
+- 新增 qedl GPT / dump 工具
+- 全局字体按窗口缩放，页面菜单动画、底部裁切和模式页自适应修复
+- 版本号更新为 0.4.0
+
 ## v0.3.1
 
 - 修复全志 FEL 在 A133 等设备上的握手超时
@@ -6,6 +18,8 @@
 - 独立消费 13 字节 AWUS ACK 和 8 字节 FEL status
 - 修正 AWUSBFEX 的 SoC ID / 协议版本解析，新增 A133
 - FEL 失败后提示断电重启设备
+
+- 新增 Qualcomm 9008 串口（COM）传输，兼容 QDLoader 串口驱动绑定
 
 ## v0.3.0
 

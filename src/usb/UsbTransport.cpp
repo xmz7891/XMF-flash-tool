@@ -7,6 +7,8 @@
 #    include "WinUsbTransport.h"
 #endif
 
+#include "SerialTransport.h"
+
 namespace gf::usb {
 
 namespace {
@@ -44,6 +46,10 @@ constexpr UsbIdRule kIdRules[] = {
     // Allwinner FEL: 1F3A:EFE8 ("efe8") is the classic FEL id.
     {0x1F3A, 0xEFE8, "aw-fel", "Allwinner FEL"},
     {0x1F3A, 0xFFFF, "aw-fel", "Allwinner FEL"},
+
+    // Amlogic USB Burning (WorldCup / ADNL): 1B8E:C003 and 1B8E:C004.
+    {0x1B8E, 0xC003, "amlogic-burn", "Amlogic USB Burn (WorldCup)"},
+    {0x1B8E, 0xC004, "amlogic-burn", "Amlogic USB Burn (ADNL)"},
 };
 
 } // namespace
@@ -76,6 +82,8 @@ ChipPlatform platformForHint(const QString& hint)
         return ChipPlatform::Rockchip;
     if (hint == QLatin1String("aw-fel"))
         return ChipPlatform::Allwinner;
+    if (hint == QLatin1String("amlogic-burn"))
+        return ChipPlatform::Amlogic;
     return ChipPlatform::Unknown;
 }
 
@@ -84,6 +92,8 @@ IUsbTransport* createTransport(const PortInfo& port)
 #ifdef _WIN32
     // The transport is created closed; the caller invokes open(port) so a
     // missing device can be reported through a normal error path.
+    if (port.devicePath.startsWith(QStringLiteral("COM"), Qt::CaseInsensitive))
+        return new SerialTransport();
     if (port.devicePath.isEmpty() && port.chipHint.isEmpty())
         return nullptr;
     return new WinUsbTransport();

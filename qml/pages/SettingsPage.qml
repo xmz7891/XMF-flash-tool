@@ -104,7 +104,7 @@ Item {
                                 model: ["debug", "info", "warning", "error"]
                                 currentIndex: Math.max(0, model.indexOf(App.settings.logLevel))
                                 onActivated: App.settings.logLevel = model[index]
-                                font.pixelSize: 11
+                                font.pixelSize: Theme.fs(11)
                                 background: Rectangle {
                                     radius: Theme.r6
                                     color: Theme.panelAlt
@@ -122,7 +122,7 @@ Item {
                                     leftPadding: 8
                                     text: logLevelCombo.displayText
                                     color: Theme.text
-                                    font.pixelSize: 11
+                                    font.pixelSize: Theme.fs(11)
                                     verticalAlignment: Text.AlignVCenter
                                 }
                             }
@@ -210,7 +210,7 @@ Item {
                                 anchors.verticalCenter: parent.verticalCenter
                                 text: "下载目录"
                                 color: Theme.text
-                                font.pixelSize: 13
+                                font.pixelSize: Theme.fs(13)
                                 font.weight: Font.DemiBold
                             }
                             Row {
@@ -225,7 +225,7 @@ Item {
                                     readOnly: true
                                     text: App.settings.downloadDir
                                     color: Theme.textSub
-                                    font.pixelSize: 10
+                                    font.pixelSize: Theme.fs(10)
                                     selectByMouse: true
                                     leftPadding: 8
                                     rightPadding: 8
@@ -275,13 +275,13 @@ Item {
                         Text {
                             text: "XMF Flash Tool  v" + App.version
                             color: Theme.text
-                            font.pixelSize: 15
+                            font.pixelSize: Theme.fs(15)
                             font.weight: Font.Bold
                         }
                         Text {
                             text: "C++20 · Qt 6.8 · Windows 10 / 11"
                             color: Theme.textMuted
-                            font.pixelSize: 10
+                            font.pixelSize: Theme.fs(10)
                         }
                     }
                     Item { width: Math.max(0, parent.width - 640); height: 1 }

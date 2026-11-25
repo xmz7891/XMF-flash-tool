@@ -34,6 +34,11 @@ public:
     Q_INVOKABLE QVariantMap loadAdbPartitions(const QString& serial);
     /// Partitions of a bootloader/fastboot mode device via getvar all.
     Q_INVOKABLE QVariantMap loadFastbootPartitions(const QString& serial);
+    /// Parses a QFIL rawprogram XML into a partition table (offline).
+    Q_INVOKABLE QVariantMap loadRawprogramXml(const QString& path);
+    /// Reads the GPT of a connected Qualcomm 9008 device through Firehose.
+    Q_INVOKABLE QVariantMap loadQcomPartitions(const QString& programmer,
+                                               const QString& memory = QStringLiteral("ufs"));
     /// Parses a Rockchip RKFW/RKAF update image into the partition table.
     Q_INVOKABLE QVariantMap loadRkFirmware(const QString& path);
     /// Parses an Allwinner IMAGEWTY (PhoenixSuit) firmware image.

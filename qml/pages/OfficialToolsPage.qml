@@ -87,7 +87,7 @@ Item {
                                         Text {
                                             text: modelData.name
                                             color: Theme.text
-                                            font.pixelSize: 12
+                                            font.pixelSize: Theme.fs(12)
                                             font.weight: Font.DemiBold
                                             elide: Text.ElideRight
                                             width: parent.width
@@ -95,7 +95,7 @@ Item {
                                         Text {
                                             text: modelData.kind === "cli" ? "命令行后端" : "图形工具"
                                             color: Theme.textMuted
-                                            font.pixelSize: 9
+                                            font.pixelSize: Theme.fs(9)
                                         }
                                     }
                                 }
@@ -104,7 +104,7 @@ Item {
                                     width: parent.width
                                     text: modelData.description
                                     color: Theme.textMuted
-                                    font.pixelSize: 9
+                                    font.pixelSize: Theme.fs(9)
                                     wrapMode: Text.WordWrap
                                     maximumLineCount: 2
                                     elide: Text.ElideRight
@@ -124,7 +124,7 @@ Item {
                                     Text {
                                         text: modelData.available ? "已内置" : "文件缺失"
                                         color: modelData.available ? Theme.textSub : Theme.textMuted
-                                        font.pixelSize: 9
+                                        font.pixelSize: Theme.fs(9)
                                         anchors.verticalCenter: parent.verticalCenter
                                     }
                                     Item { width: Math.max(0, parent.width - 190); height: 1 }
@@ -172,14 +172,14 @@ Item {
                             Text {
                                 text: "随附驱动包"
                                 color: Theme.text
-                                font.pixelSize: 12
+                                font.pixelSize: Theme.fs(12)
                                 font.weight: Font.DemiBold
                             }
                             Text {
                                 width: parent.width
                                 text: App.officialTools.drivers.length + " 组驱动（Qualcomm 9008 / Google ADB / MTK / 展锐等），可通过「安装驱动」调用 pnputil 安装，需管理员权限。"
                                 color: Theme.textMuted
-                                font.pixelSize: 10
+                                font.pixelSize: Theme.fs(10)
                                 wrapMode: Text.WordWrap
                             }
                         }
@@ -224,13 +224,13 @@ Item {
                                     Text {
                                         text: modelData.vendor
                                         color: Theme.text
-                                        font.pixelSize: 12
+                                        font.pixelSize: Theme.fs(12)
                                         font.weight: Font.Medium
                                     }
                                     Text {
                                         text: modelData.infCount + " 个 inf"
                                         color: Theme.textMuted
-                                        font.pixelSize: 9
+                                        font.pixelSize: Theme.fs(9)
                                     }
                                 }
                             }
@@ -262,7 +262,7 @@ Item {
                             width: parent.width - 40
                             text: "官方工具仅作为兼容后端随包附带，版权归各厂商所有；主程序的「内置模式」工作台仍以单窗口方式完成同一套流程，无需打开外部程序。"
                             color: Theme.textMuted
-                            font.pixelSize: 10
+                            font.pixelSize: Theme.fs(10)
                             wrapMode: Text.WordWrap
                             anchors.verticalCenter: parent.verticalCenter
                         }

@@ -63,7 +63,7 @@ Item {
 
         Row {
             width: parent.width
-            height: 190
+            height: Math.max(160, Math.min(220, page.height * 0.27))
             spacing: 12
 
             GlassSurface {
@@ -81,7 +81,7 @@ Item {
                         visible: App.adbDevices.length === 0
                         text: "未检测到 ADB 设备。\n请先进入 Recovery（关机后按住 音量+ + 电源），\n并在 Recovery 中开启 ADB / Sideload。"
                         color: Theme.textMuted
-                        font.pixelSize: 11
+                        font.pixelSize: Theme.fs(11)
                         wrapMode: Text.Wrap
                     }
 
@@ -106,21 +106,21 @@ Item {
                             Text {
                                 text: modelData.serial || ""
                                 color: Theme.text
-                                font.pixelSize: 11
+                                font.pixelSize: Theme.fs(11)
                                 font.family: "Consolas"
                                 anchors.verticalCenter: parent.verticalCenter
                             }
                             Text {
                                 text: modelData.state || ""
                                 color: String(modelData.state || "") === "sideload" ? Theme.success : Theme.textMuted
-                                font.pixelSize: 10
+                                font.pixelSize: Theme.fs(10)
                                 anchors.verticalCenter: parent.verticalCenter
                             }
                             Text {
                                 visible: String(modelData.state || "") === "sideload"
                                 text: "← 可以开始卡刷"
                                 color: Theme.success
-                                font.pixelSize: 10
+                                font.pixelSize: Theme.fs(10)
                                 anchors.verticalCenter: parent.verticalCenter
                             }
                         }
@@ -140,7 +140,7 @@ Item {
                     Text {
                         width: parent.width
                         color: Theme.textSub
-                        font.pixelSize: 11
+                        font.pixelSize: Theme.fs(11)
                         wrapMode: Text.Wrap
                         text: "• 系统可启动：`adb reboot recovery`\n"
                               + "• 系统无法启动：关机后按住 音量+ + 电源 进入 Recovery\n"
@@ -150,7 +150,7 @@ Item {
                     Text {
                         width: parent.width
                         color: Theme.textMuted
-                        font.pixelSize: 10
+                        font.pixelSize: Theme.fs(10)
                         wrapMode: Text.Wrap
                         text: "注意：Recovery 卡刷 ≠ Fastboot 刷分区；A/B 设备 sideload 会走 update_engine 写入非活动槽。"
                     }
@@ -207,7 +207,7 @@ Item {
                 Text {
                     width: parent.width
                     color: Theme.textSub
-                    font.pixelSize: 11
+                    font.pixelSize: Theme.fs(11)
                     wrapMode: Text.Wrap
                     text: "1. 用「重启到 Recovery」把设备送入 Recovery（或手动按键进入）。\n"
                           + "2. 在 Recovery 中开启 ADB Sideload（TWRP：Apply update → ADB Sideload；官方 Recovery：Apply update from ADB）。\n"
@@ -219,7 +219,7 @@ Item {
                 Text {
                     width: parent.width
                     color: Theme.textMuted
-                    font.pixelSize: 10
+                    font.pixelSize: Theme.fs(10)
                     wrapMode: Text.Wrap
                     text: "参考开源项目：PixelFlasher（ADB/fastboot 封装）、OpenAndroidInstaller（Recovery 卡刷流程）。"
                 }

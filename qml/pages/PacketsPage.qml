@@ -71,16 +71,16 @@ Item {
                     Row {
                         anchors.fill: parent
                         anchors.leftMargin: 2
-                        Text { width: 220; text: modelData.name; color: Theme.text; font.pixelSize: 11; elide: Text.ElideRight }
-                        Text { width: 60; text: modelData.type; color: Theme.textSub; font.pixelSize: 11 }
-                        Text { width: 74; text: modelData.brandCount + " 品牌"; color: Theme.textSub; font.pixelSize: 11 }
-                        Text { width: 74; text: modelData.seriesCount + " 系列"; color: Theme.textSub; font.pixelSize: 11 }
-                        Text { width: 74; text: modelData.modelCount + " 机型"; color: Theme.text; font.pixelSize: 11 }
+                        Text { width: 220; text: modelData.name; color: Theme.text; font.pixelSize: Theme.fs(11); elide: Text.ElideRight }
+                        Text { width: 60; text: modelData.type; color: Theme.textSub; font.pixelSize: Theme.fs(11) }
+                        Text { width: 74; text: modelData.brandCount + " 品牌"; color: Theme.textSub; font.pixelSize: Theme.fs(11) }
+                        Text { width: 74; text: modelData.seriesCount + " 系列"; color: Theme.textSub; font.pixelSize: Theme.fs(11) }
+                        Text { width: 74; text: modelData.modelCount + " 机型"; color: Theme.text; font.pixelSize: Theme.fs(11) }
                         Text {
                             text: "v" + (modelData.version || "-") + " · " + (modelData.publisher || "未知")
                                   + " · " + (modelData.sourceType === "zip" ? "ZIP" : "目录")
                             color: Theme.textMuted
-                            font.pixelSize: 10
+                            font.pixelSize: Theme.fs(10)
                         }
                     }
                     MouseArea {
@@ -116,10 +116,10 @@ Item {
                 Row {
                     width: parent.width
                     height: 20
-                    Text { width: 130; text: "品牌"; color: Theme.textMuted; font.pixelSize: 10 }
-                    Text { width: 150; text: "系列"; color: Theme.textMuted; font.pixelSize: 10 }
-                    Text { width: 240; text: "机型"; color: Theme.textMuted; font.pixelSize: 10 }
-                    Text { text: "说明"; color: Theme.textMuted; font.pixelSize: 10 }
+                    Text { width: 130; text: "品牌"; color: Theme.textMuted; font.pixelSize: Theme.fs(10) }
+                    Text { width: 150; text: "系列"; color: Theme.textMuted; font.pixelSize: Theme.fs(10) }
+                    Text { width: 240; text: "机型"; color: Theme.textMuted; font.pixelSize: Theme.fs(10) }
+                    Text { text: "说明"; color: Theme.textMuted; font.pixelSize: Theme.fs(10) }
                 }
                 Rectangle { width: parent.width; height: 1; color: Theme.divider }
 
@@ -140,10 +140,10 @@ Item {
                             Row {
                                 anchors.fill: parent
                                 anchors.leftMargin: 2
-                                Text { width: 130; text: modelData.brand || ""; color: Theme.textSub; font.pixelSize: 11; elide: Text.ElideRight }
-                                Text { width: 150; text: modelData.series || ""; color: Theme.textSub; font.pixelSize: 11; elide: Text.ElideRight }
-                                Text { width: 240; text: modelData.name || ""; color: Theme.text; font.pixelSize: 11; elide: Text.ElideRight }
-                                Text { text: modelData.description || ""; color: Theme.textMuted; font.pixelSize: 10; elide: Text.ElideRight }
+                                Text { width: 130; text: modelData.brand || ""; color: Theme.textSub; font.pixelSize: Theme.fs(11); elide: Text.ElideRight }
+                                Text { width: 150; text: modelData.series || ""; color: Theme.textSub; font.pixelSize: Theme.fs(11); elide: Text.ElideRight }
+                                Text { width: 240; text: modelData.name || ""; color: Theme.text; font.pixelSize: Theme.fs(11); elide: Text.ElideRight }
+                                Text { text: modelData.description || ""; color: Theme.textMuted; font.pixelSize: Theme.fs(10); elide: Text.ElideRight }
                             }
                             MouseArea { id: mRow; anchors.fill: parent; hoverEnabled: true; acceptedButtons: Qt.NoButton }
                         }

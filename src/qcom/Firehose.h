@@ -109,11 +109,13 @@ public:
 
 private:
     QString readResponseXml(int timeoutMs);
+    QByteArray readRawExact(qint64 size, int timeoutMs);
     void writeData(const QByteArray& data, int timeoutMs);
 
     usb::IUsbTransport& m_transport;
     proto::Reporter m_reporter;
     QString m_lastRaw;
+    QByteArray m_rx;
 };
 
 /// True when `raw` contains a complete `<response ...>...</response>` / `<response .../>`.

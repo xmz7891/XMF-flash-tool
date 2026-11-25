@@ -54,10 +54,10 @@ Item {
             Row {
                 width: parent.width
                 height: 20
-                Text { width: 76; text: "端口"; color: Theme.textMuted; font.pixelSize: 10 }
-                Text { width: parent.width - 76 - 260; text: "设备描述"; color: Theme.textMuted; font.pixelSize: 10 }
-                Text { width: 160; text: "模式"; color: Theme.textMuted; font.pixelSize: 10 }
-                Text { width: 60; text: "状态"; color: Theme.textMuted; font.pixelSize: 10 }
+                Text { width: 76; text: "端口"; color: Theme.textMuted; font.pixelSize: Theme.fs(10) }
+                Text { width: parent.width - 76 - 260; text: "设备描述"; color: Theme.textMuted; font.pixelSize: Theme.fs(10) }
+                Text { width: 160; text: "模式"; color: Theme.textMuted; font.pixelSize: Theme.fs(10) }
+                Text { width: 60; text: "状态"; color: Theme.textMuted; font.pixelSize: Theme.fs(10) }
             }
             Rectangle { width: parent.width; height: 1; color: Theme.divider }
 
@@ -75,14 +75,14 @@ Item {
                     Row {
                         anchors.fill: parent
                         anchors.leftMargin: 2
-                        Text { width: 76; text: modelData.portName || "—"; color: Theme.textSub; font.pixelSize: 11; elide: Text.ElideRight }
-                        Text { width: parent.width - 76 - 260; text: modelData.description || ""; color: Theme.text; font.pixelSize: 11; elide: Text.ElideRight }
-                        Text { width: 160; text: modelData.chipLabel || modelData.kindLabel || ""; color: Theme.textSub; font.pixelSize: 11; elide: Text.ElideRight }
+                        Text { width: 76; text: modelData.portName || "—"; color: Theme.textSub; font.pixelSize: Theme.fs(11); elide: Text.ElideRight }
+                        Text { width: parent.width - 76 - 260; text: modelData.description || ""; color: Theme.text; font.pixelSize: Theme.fs(11); elide: Text.ElideRight }
+                        Text { width: 160; text: modelData.chipLabel || modelData.kindLabel || ""; color: Theme.textSub; font.pixelSize: Theme.fs(11); elide: Text.ElideRight }
                         Text {
                             width: 60
                             text: modelData.hasProblem ? "异常" : "正常"
                             color: modelData.hasProblem ? Theme.danger : Theme.success
-                            font.pixelSize: 11
+                            font.pixelSize: Theme.fs(11)
                         }
                     }
                     MouseArea { id: pMouse; anchors.fill: parent; hoverEnabled: true; acceptedButtons: Qt.NoButton }
@@ -123,8 +123,8 @@ Item {
                 ]
                 delegate: Row {
                     width: parent.width
-                    Text { width: 84; text: modelData.k; color: Theme.textMuted; font.pixelSize: 11 }
-                    Text { width: parent.width - 84; text: modelData.v; color: Theme.text; font.pixelSize: 11; elide: Text.ElideRight }
+                    Text { width: 84; text: modelData.k; color: Theme.textMuted; font.pixelSize: Theme.fs(11) }
+                    Text { width: parent.width - 84; text: modelData.v; color: Theme.text; font.pixelSize: Theme.fs(11); elide: Text.ElideRight }
                 }
             }
 
@@ -133,24 +133,24 @@ Item {
             Row {
                 width: parent.width
                 visible: (App.deviceInfo.battery || "").length > 0
-                Text { width: 84; text: "电池"; color: Theme.textMuted; font.pixelSize: 11 }
+                Text { width: 84; text: "电池"; color: Theme.textMuted; font.pixelSize: Theme.fs(11) }
                 Text {
                     width: parent.width - 84
                     text: App.deviceInfo.battery + " mV"
                           + (App.deviceInfo.batteryOk === false ? "（低电量/状态异常）" : "")
                     color: App.deviceInfo.batteryOk === false ? Theme.danger : Theme.text
-                    font.pixelSize: 11
+                    font.pixelSize: Theme.fs(11)
                 }
             }
             Row {
                 width: parent.width
                 visible: (App.deviceInfo.slot || "").length > 0
-                Text { width: 84; text: "当前槽位"; color: Theme.textMuted; font.pixelSize: 11 }
+                Text { width: 84; text: "当前槽位"; color: Theme.textMuted; font.pixelSize: Theme.fs(11) }
                 Text {
                     width: parent.width - 84
                     text: App.deviceInfo.slot + " · BL " + (App.deviceInfo.bootloader || "—")
                     color: Theme.text
-                    font.pixelSize: 11
+                    font.pixelSize: Theme.fs(11)
                 }
             }
 
@@ -183,11 +183,11 @@ Item {
             Row {
                 width: parent.width
                 height: 20
-                Text { width: 200; text: "名称"; color: Theme.textMuted; font.pixelSize: 10 }
-                Text { width: 60; text: "类型"; color: Theme.textMuted; font.pixelSize: 10 }
-                Text { width: 70; text: "机型"; color: Theme.textMuted; font.pixelSize: 10 }
-                Text { width: 60; text: "品牌"; color: Theme.textMuted; font.pixelSize: 10 }
-                Text { text: "来源"; color: Theme.textMuted; font.pixelSize: 10 }
+                Text { width: 200; text: "名称"; color: Theme.textMuted; font.pixelSize: Theme.fs(10) }
+                Text { width: 60; text: "类型"; color: Theme.textMuted; font.pixelSize: Theme.fs(10) }
+                Text { width: 70; text: "机型"; color: Theme.textMuted; font.pixelSize: Theme.fs(10) }
+                Text { width: 60; text: "品牌"; color: Theme.textMuted; font.pixelSize: Theme.fs(10) }
+                Text { text: "来源"; color: Theme.textMuted; font.pixelSize: Theme.fs(10) }
             }
             Rectangle { width: parent.width; height: 1; color: Theme.divider }
 
@@ -203,11 +203,11 @@ Item {
                     Row {
                         anchors.fill: parent
                         anchors.leftMargin: 2
-                        Text { width: 200; text: modelData.name; color: Theme.text; font.pixelSize: 11; elide: Text.ElideRight }
-                        Text { width: 60; text: modelData.type; color: Theme.textSub; font.pixelSize: 11 }
-                        Text { width: 70; text: modelData.modelCount; color: Theme.text; font.pixelSize: 11 }
-                        Text { width: 60; text: modelData.brandCount; color: Theme.textSub; font.pixelSize: 11 }
-                        Text { text: modelData.sourceType === "zip" ? "ZIP" : "目录"; color: Theme.textMuted; font.pixelSize: 11 }
+                        Text { width: 200; text: modelData.name; color: Theme.text; font.pixelSize: Theme.fs(11); elide: Text.ElideRight }
+                        Text { width: 60; text: modelData.type; color: Theme.textSub; font.pixelSize: Theme.fs(11) }
+                        Text { width: 70; text: modelData.modelCount; color: Theme.text; font.pixelSize: Theme.fs(11) }
+                        Text { width: 60; text: modelData.brandCount; color: Theme.textSub; font.pixelSize: Theme.fs(11) }
+                        Text { text: modelData.sourceType === "zip" ? "ZIP" : "目录"; color: Theme.textMuted; font.pixelSize: Theme.fs(11) }
                     }
                     MouseArea { id: pkMouse; anchors.fill: parent; hoverEnabled: true; onClicked: page.navigateTo(4) }
                 }
@@ -242,12 +242,12 @@ Item {
                 width: ListView.view.width
                 height: 17
                 spacing: 6
-                Text { text: model.time; color: Theme.textMuted; font.pixelSize: 9; font.family: "Consolas"; anchors.verticalCenter: parent.verticalCenter }
+                Text { text: model.time; color: Theme.textMuted; font.pixelSize: Theme.fs(9); font.family: "Consolas"; anchors.verticalCenter: parent.verticalCenter }
                 Text {
                     width: parent.width - 82
                     text: model.message
                     color: model.level >= 3 ? (model.level === 3 ? Theme.warning : Theme.danger) : Theme.textSub
-                    font.pixelSize: 10
+                    font.pixelSize: Theme.fs(10)
                     elide: Text.ElideRight
                     anchors.verticalCenter: parent.verticalCenter
                 }

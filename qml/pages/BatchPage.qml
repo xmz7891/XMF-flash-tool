@@ -114,7 +114,7 @@ Item {
                     Text {
                         text: "执行工具"
                         color: Theme.textSub
-                        font.pixelSize: 11
+                        font.pixelSize: Theme.fs(11)
                         width: 56
                         anchors.verticalCenter: parent.verticalCenter
                     }
@@ -126,7 +126,7 @@ Item {
                         textRole: "name"
                         currentIndex: page.toolIndex
                         onActivated: page.toolIndex = index
-                        font.pixelSize: 11
+                        font.pixelSize: Theme.fs(11)
                         background: Rectangle {
                             radius: Theme.r10
                             color: Theme.panel
@@ -138,7 +138,7 @@ Item {
                             leftPadding: 6
                             text: toolCombo.displayText
                             color: Theme.text
-                            font.pixelSize: 11
+                            font.pixelSize: Theme.fs(11)
                             verticalAlignment: Text.AlignVCenter
                         }
                     }
@@ -147,14 +147,14 @@ Item {
                               ? "文件参数：" + page.pathFieldOf(page.batchTools[page.toolIndex]).label
                               : "该工具没有文件参数"
                         color: Theme.textMuted
-                        font.pixelSize: 10
+                        font.pixelSize: Theme.fs(10)
                         anchors.verticalCenter: parent.verticalCenter
                     }
                     Item { width: Math.max(0, parent.width - 700); height: 1 }
                     Text {
                         text: "并发"
                         color: Theme.textMuted
-                        font.pixelSize: 10
+                        font.pixelSize: Theme.fs(10)
                         anchors.verticalCenter: parent.verticalCenter
                     }
                     ComboBox {
@@ -164,7 +164,7 @@ Item {
                         model: [1, 2, 3, 4]
                         currentIndex: page.parallel - 1
                         onActivated: page.parallel = model[index]
-                        font.pixelSize: 11
+                        font.pixelSize: Theme.fs(11)
                         background: Rectangle {
                             radius: Theme.r10
                             color: Theme.panel
@@ -176,7 +176,7 @@ Item {
                             leftPadding: 6
                             text: parallelCombo.displayText
                             color: Theme.text
-                            font.pixelSize: 11
+                            font.pixelSize: Theme.fs(11)
                             verticalAlignment: Text.AlignVCenter
                         }
                     }
@@ -204,14 +204,14 @@ Item {
                                     + " 失败 " + page.batchState.failed)
                                  : "尚未开始")
                         color: Theme.text
-                        font.pixelSize: 11
+                        font.pixelSize: Theme.fs(11)
                     }
                     Item { width: parent.width - 430; height: 1 }
                     Text {
                         visible: page.batchState.total > 0
                         text: page.batchState.percent + "%"
                         color: Theme.textSub
-                        font.pixelSize: 11
+                        font.pixelSize: Theme.fs(11)
                     }
                 }
                 Rectangle {
@@ -229,7 +229,7 @@ Item {
                 Text {
                     text: page.batchState.current || "空闲"
                     color: Theme.textMuted
-                    font.pixelSize: 10
+                    font.pixelSize: Theme.fs(10)
                     elide: Text.ElideRight
                     width: parent.width
                 }
@@ -256,7 +256,7 @@ Item {
         // file table
         GlassSurface {
             width: parent.width
-            height: parent.height - 44 - 54 - 30 - 6 - 6 - 6
+            height: Math.max(150, parent.height - 218)
             title: "文件列表"
 
             Column {
@@ -266,11 +266,11 @@ Item {
                 Row {
                     width: parent.width
                     height: 20
-                    Text { width: 30; text: "#"; color: Theme.textMuted; font.pixelSize: 10 }
-                    Text { width: parent.width - 30 - 90 - 260 - 210; text: "文件"; color: Theme.textMuted; font.pixelSize: 10 }
-                    Text { width: 90; text: "大小"; color: Theme.textMuted; font.pixelSize: 10 }
-                    Text { width: 260; text: "路径"; color: Theme.textMuted; font.pixelSize: 10 }
-                    Text { width: 110; text: "状态"; color: Theme.textMuted; font.pixelSize: 10 }
+                    Text { width: 30; text: "#"; color: Theme.textMuted; font.pixelSize: Theme.fs(10) }
+                    Text { width: parent.width - 30 - 90 - 260 - 210; text: "文件"; color: Theme.textMuted; font.pixelSize: Theme.fs(10) }
+                    Text { width: 90; text: "大小"; color: Theme.textMuted; font.pixelSize: Theme.fs(10) }
+                    Text { width: 260; text: "路径"; color: Theme.textMuted; font.pixelSize: Theme.fs(10) }
+                    Text { width: 110; text: "状态"; color: Theme.textMuted; font.pixelSize: Theme.fs(10) }
                 }
                 Rectangle { width: parent.width; height: 1; color: Theme.divider }
 
@@ -287,16 +287,16 @@ Item {
                         Row {
                             anchors.fill: parent
                             anchors.leftMargin: 2
-                            Text { width: 30; text: (index + 1); color: Theme.textMuted; font.pixelSize: 10 }
-                            Text { width: parent.width - 30 - 90 - 260 - 210; text: modelData.name; color: Theme.text; font.pixelSize: 11; elide: Text.ElideRight }
-                            Text { width: 90; text: modelData.sizeText || ""; color: Theme.textSub; font.pixelSize: 11 }
-                            Text { width: 260; text: modelData.path; color: Theme.textMuted; font.pixelSize: 10; elide: Text.ElideMiddle }
+                            Text { width: 30; text: (index + 1); color: Theme.textMuted; font.pixelSize: Theme.fs(10) }
+                            Text { width: parent.width - 30 - 90 - 260 - 210; text: modelData.name; color: Theme.text; font.pixelSize: Theme.fs(11); elide: Text.ElideRight }
+                            Text { width: 90; text: modelData.sizeText || ""; color: Theme.textSub; font.pixelSize: Theme.fs(11) }
+                            Text { width: 260; text: modelData.path; color: Theme.textMuted; font.pixelSize: Theme.fs(10); elide: Text.ElideMiddle }
                             Text {
                                 width: 110
                                 text: page.rowState(index)
                                 color: page.rowState(index) === "执行中" ? Theme.accent
                                       : (page.rowState(index) === "完成" ? Theme.success : Theme.textMuted)
-                                font.pixelSize: 11
+                                font.pixelSize: Theme.fs(11)
                             }
                         }
                         MouseArea { id: fMouse; anchors.fill: parent; hoverEnabled: true; acceptedButtons: Qt.NoButton }

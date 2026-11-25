@@ -37,7 +37,7 @@ Item {
             width: Math.min(220, parent.width * 0.22)
             text: root.toolData.name || ""
             color: Theme.text
-            font.pixelSize: 12
+            font.pixelSize: Theme.fs(12)
             elide: Text.ElideRight
             anchors.verticalCenter: parent.verticalCenter
         }
@@ -46,7 +46,7 @@ Item {
             width: parent.width - Math.min(220, parent.width * 0.22) - 250
             text: root.toolData.desc || ""
             color: Theme.textMuted
-            font.pixelSize: 11
+            font.pixelSize: Theme.fs(11)
             elide: Text.ElideRight
             anchors.verticalCenter: parent.verticalCenter
         }
@@ -56,7 +56,7 @@ Item {
             text: (root.toolData.maturity || 0) === 2 ? "开发中"
                   : ((root.toolData.maturity || 0) === 1 ? "Beta" : "")
             color: Theme.textMuted
-            font.pixelSize: 10
+            font.pixelSize: Theme.fs(10)
             anchors.verticalCenter: parent.verticalCenter
         }
 
@@ -65,7 +65,7 @@ Item {
         Text {
             text: root.toolData.runnable === false ? "" : "打开"
             color: mouse.containsMouse ? Theme.accent : Theme.textMuted
-            font.pixelSize: 11
+            font.pixelSize: Theme.fs(11)
             anchors.verticalCenter: parent.verticalCenter
         }
     }

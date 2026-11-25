@@ -96,7 +96,7 @@ Item {
                         anchors.centerIn: parent
                         text: modelData.name
                         color: page.levelFilter === modelData.level ? Theme.textOnAccent : Theme.textSub
-                        font.pixelSize: 10
+                        font.pixelSize: Theme.fs(10)
                     }
                     MouseArea {
                         anchors.fill: parent
@@ -144,7 +144,7 @@ Item {
                         Text {
                             text: model.time
                             color: Theme.textMuted
-                            font.pixelSize: 10
+                            font.pixelSize: Theme.fs(10)
                             font.family: "Consolas"
                             width: 78
                             anchors.verticalCenter: parent.verticalCenter
@@ -159,7 +159,7 @@ Item {
                                 anchors.centerIn: parent
                                 text: model.category
                                 color: page.levelColor(model.level)
-                                font.pixelSize: 8
+                                font.pixelSize: Theme.fs(8)
                                 elide: Text.ElideRight
                                 width: parent.width - 6
                                 horizontalAlignment: Text.AlignHCenter
@@ -169,7 +169,7 @@ Item {
                             width: parent.width - 200
                             text: model.message
                             color: model.level >= 3 ? page.levelColor(model.level) : Theme.textSub
-                            font.pixelSize: 11
+                            font.pixelSize: Theme.fs(11)
                             font.family: "Consolas"
                             elide: Text.ElideRight
                             anchors.verticalCenter: parent.verticalCenter

@@ -120,7 +120,7 @@ Item {
                 Text {
                     text: page.toolName
                     color: Theme.text
-                    font.pixelSize: 14
+                    font.pixelSize: Theme.fs(14)
                     font.weight: Font.DemiBold
                 }
                 Text {
@@ -128,7 +128,7 @@ Item {
                           ? (App.embedded.embedded ? "已内嵌运行 · " + App.embedded.title : "正在启动官方工具…")
                           : "未运行"
                     color: Theme.textMuted
-                    font.pixelSize: 10
+                    font.pixelSize: Theme.fs(10)
                 }
             }
 
@@ -206,7 +206,7 @@ Item {
                     anchors.horizontalCenter: parent.horizontalCenter
                     text: App.embedded.running ? "正在启动官方工具，请稍候…" : "官方工具未运行"
                     color: Theme.textMuted
-                    font.pixelSize: 11
+                    font.pixelSize: Theme.fs(11)
                 }
             }
         }
@@ -219,7 +219,7 @@ Item {
                 text: App.embedded.error !== "" ? App.embedded.error
                       : "官方工具以子窗口方式内嵌在主界面中；可随时切换到独立窗口或关闭。"
                 color: App.embedded.error !== "" ? Theme.danger : Theme.textMuted
-                font.pixelSize: 10
+                font.pixelSize: Theme.fs(10)
                 elide: Text.ElideRight
                 width: parent.width - (elevatedButton.visible ? 130 : 0)
                 anchors.verticalCenter: parent.verticalCenter

@@ -26,7 +26,7 @@ Item {
             anchors.horizontalCenter: parent.horizontalCenter
             text: root.title
             color: Theme.textSub
-            font.pixelSize: 12
+            font.pixelSize: Theme.fs(12)
             font.weight: Font.DemiBold
         }
         Text {
@@ -37,7 +37,7 @@ Item {
             wrapMode: Text.WordWrap
             text: root.text
             color: Theme.textMuted
-            font.pixelSize: 11
+            font.pixelSize: Theme.fs(11)
             lineHeight: 1.4
         }
         AppButton {

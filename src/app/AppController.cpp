@@ -243,8 +243,16 @@ void AppController::refreshDevices()
                 refreshDeviceMode();
                 emit adbDevicesChanged();
                 emit deviceInfoChanged();
-                if (!error.isEmpty())
-                    GF_WARN(QStringLiteral("adb"), error);
+                // Do not append the same "adb.exe missing" warning every
+                // refresh tick; it floods the execution log when no device and
+                // no platform-tools are present.
+                if (!error.isEmpty() && device::AdbClient::available()) {
+                    static QString lastAdbWarning;
+                    if (lastAdbWarning != error) {
+                        lastAdbWarning = error;
+                        GF_WARN(QStringLiteral("adb"), error);
+                    }
+                }
             },
             Qt::QueuedConnection);
     }));
@@ -604,6 +612,12 @@ void AppController::refreshDeviceMode()
             modeId = QStringLiteral("aw-fel");
             label = QStringLiteral("Allwinner FEL");
             platform = QStringLiteral("aw");
+        } else if (kind == QLatin1String("amlogic-burn")
+                   || text.contains(QStringLiteral("AML")) || text.contains(QStringLiteral("1B8E"))
+                   || text.contains(QStringLiteral("WORLDCUP"))) {
+            modeId = QStringLiteral("amlogic-burn");
+            label = QStringLiteral("Amlogic USB Burning");
+            platform = QStringLiteral("amlogic");
         }
         if (!modeId.isEmpty()) {
             mode.insert(QStringLiteral("mode"), modeId);

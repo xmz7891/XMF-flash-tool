@@ -16,7 +16,8 @@ Item {
         { id: "spflash", name: "SP Flash Tool", sub: "联发科 Scatter 固件", detail: "全部下载、仅刷选定分区、格式化下载、分区回读", icon: "microchip", tag: "MTK" },
         { id: "spdflash", name: "SPD Flash Tool", sub: "紫光展锐 PAC 固件", detail: "PAC 解析、FDL 握手、分区刷写与备份", icon: "layers", tag: "SPRD" },
         { id: "rkdevtool", name: "RKDevTool", sub: "瑞芯微固件与分区镜像", detail: "MaskROM / Loader 设备识别、分区烧录与回读", icon: "box", tag: "RK" },
-        { id: "phoenixsuit", name: "PhoenixSuit", sub: "全志固件镜像", detail: "FEL 模式识别、一键刷机与分区读写", icon: "sun", tag: "AW" }
+        { id: "phoenixsuit", name: "PhoenixSuit", sub: "全志固件镜像", detail: "FEL 模式识别、一键刷机与分区读写", icon: "sun", tag: "AW" },
+        { id: "amlogic-burn", name: "Amlogic USB Burning", sub: "晶晨 WorldCup / ADNL", detail: "1B8E:C003/C004 识别、镜像解析/解包/重打包、调用 update.exe 烧写", icon: "cpu", tag: "AML" }
     ]
 
     Column {
@@ -89,7 +90,7 @@ Item {
                                     Text {
                                         text: modelData.name
                                         color: Theme.text
-                                        font.pixelSize: 13
+                                        font.pixelSize: Theme.fs(13)
                                         font.weight: Font.DemiBold
                                     }
                                     Rectangle {
@@ -105,7 +106,7 @@ Item {
                                             anchors.centerIn: parent
                                             text: modelData.tag
                                             color: Theme.textMuted
-                                            font.pixelSize: 8
+                                            font.pixelSize: Theme.fs(8)
                                             font.weight: Font.DemiBold
                                         }
                                     }
@@ -113,12 +114,12 @@ Item {
                                 Text {
                                     text: modelData.sub
                                     color: Theme.textSub
-                                    font.pixelSize: 10
+                                    font.pixelSize: Theme.fs(10)
                                 }
                                 Text {
                                     text: modelData.detail
                                     color: Theme.textMuted
-                                    font.pixelSize: 10
+                                    font.pixelSize: Theme.fs(10)
                                     elide: Text.ElideRight
                                     width: parent.width
                                 }
@@ -157,7 +158,7 @@ Item {
                             width: parent.width - 40
                             text: "所有工作台共用同一套设备端口、日志与任务系统；切换模式不会中断正在执行的操作，也不会另开窗口。"
                             color: Theme.textSub
-                            font.pixelSize: 10
+                            font.pixelSize: Theme.fs(10)
                             wrapMode: Text.WordWrap
                             anchors.verticalCenter: parent.verticalCenter
                         }

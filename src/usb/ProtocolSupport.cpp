@@ -67,6 +67,8 @@ QString platformName(usb::ChipPlatform platform)
         return QStringLiteral("瑞芯微 RockUSB");
     case usb::ChipPlatform::Allwinner:
         return QStringLiteral("全志 FEL");
+    case usb::ChipPlatform::Amlogic:
+        return QStringLiteral("晶晨 USB Burn");
     case usb::ChipPlatform::Unknown:
         break;
     }
@@ -86,6 +88,8 @@ QString platformKey(usb::ChipPlatform platform)
         return QStringLiteral("rk");
     case usb::ChipPlatform::Allwinner:
         return QStringLiteral("aw");
+    case usb::ChipPlatform::Amlogic:
+        return QStringLiteral("amlogic");
     case usb::ChipPlatform::Unknown:
         break;
     }
@@ -105,6 +109,8 @@ QString platformChipHint(usb::ChipPlatform platform)
         return QStringLiteral("rk");
     case usb::ChipPlatform::Allwinner:
         return QStringLiteral("aw-fel");
+    case usb::ChipPlatform::Amlogic:
+        return QStringLiteral("amlogic-burn");
     case usb::ChipPlatform::Unknown:
         break;
     }
@@ -126,6 +132,8 @@ QString noDeviceMessage(usb::ChipPlatform platform)
                               "请确认设备已进入 Loader 模式并安装驱动");
     case usb::ChipPlatform::Allwinner:
         return QStringLiteral("未检测到全志 FEL 端口（VID 1F3A），请确认设备已进入 FEL 模式并安装驱动");
+    case usb::ChipPlatform::Amlogic:
+        return QStringLiteral("未检测到晶晨 USB Burn 端口（VID 1B8E），请确认设备已进入 USB Burning 模式并安装 WorldCup 驱动");
     case usb::ChipPlatform::Unknown:
         break;
     }
@@ -182,7 +190,7 @@ std::unique_ptr<usb::IUsbTransport> openTransport(usb::ChipPlatform platform,
     std::unique_ptr<usb::IUsbTransport> transport(usb::createTransport(port));
     if (!transport) {
         throw std::runtime_error(
-            QStringLiteral("当前系统未提供 %1 的 USB 传输实现（仅 Windows 支持 WinUSB）")
+            QStringLiteral("当前系统未提供 %1 的传输实现（Windows 支持 WinUSB 与 9008 串口）")
                 .arg(platformName(platform))
                 .toStdString());
     }

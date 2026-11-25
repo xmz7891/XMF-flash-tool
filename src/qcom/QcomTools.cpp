@@ -1,6 +1,7 @@
 #include "QcomTools.h"
 
 #include <QFileInfo>
+#include <QProcess>
 #include <QString>
 #include <QVariantMap>
 
@@ -9,6 +10,7 @@
 
 #include "../app/ToolModules.h"
 #include "Elf.h"
+#include "QedlBootstrap.h"
 #include "Firehose.h"
 #include "Sahara.h"
 #include "TaskManager.h"
@@ -18,6 +20,7 @@
 #include "usb/TaskReporter.h"
 #include "usb/ToolOptions.h"
 #include "usb/UsbTransport.h"
+#include "flows/QcomFlow.h"
 
 namespace gf {
 
@@ -87,18 +90,12 @@ FirehoseSession openFirehoseSession(const QVariantMap& options,
     reporter.info(qcom::describeElf(elf));
 
     reporter.progress(5, QStringLiteral("查找 9008 端口…"));
+    QString qedlError;
+    if (!qcom::bootstrapLoader(programmerPath, deviceOption(options), &qedlError))
+        reporter.debug(QStringLiteral("qedl bootstrap skipped: %1").arg(qedlError));
     FirehoseSession session;
     session.transport = proto::openTransport(ChipPlatform::Qualcomm, deviceOption(options), reporter);
     session.sahara = std::make_unique<qcom::sahara::Client>(*session.transport, reporter);
-
-    reporter.progress(10, QStringLiteral("Sahara 握手…"));
-    session.sahara->handshake();
-    reporter.progress(15, QStringLiteral("Sahara 上传 programmer…"));
-    const auto upload = session.sahara->upload(image, 10000, 15, 45);
-    if (!upload.success) {
-        throw std::runtime_error(
-            QStringLiteral("Sahara 上传 programmer 失败：%1").arg(upload.error).toStdString());
-    }
 
     session.firehose = std::make_unique<qcom::firehose::Client>(*session.transport, reporter);
     qcom::firehose::StorageConfig config;
@@ -106,6 +103,31 @@ FirehoseSession openFirehoseSession(const QVariantMap& options,
     if (!memory.isEmpty())
         config.memoryName = memory;
     config.maxPayloadBytes = proto::optionInt(options, QStringLiteral("max_payload"), 1024 * 1024);
+
+    reporter.progress(10, QStringLiteral("Sahara 握手…"));
+    try {
+        session.sahara->handshake();
+        reporter.progress(15, QStringLiteral("Sahara 上传 programmer…"));
+        const auto upload = session.sahara->upload(image, 10000, 15, 45);
+        if (!upload.success) {
+            throw std::runtime_error(
+                QStringLiteral("Sahara 上传 programmer 失败：%1").arg(upload.error).toStdString());
+        }
+    } catch (const std::exception& error) {
+        // A previous QFIL/MiFlash/XMF session may have left the device running
+        // a Firehose programmer. It then has no Sahara HELLO but answers XML.
+        reporter.warn(QStringLiteral("Sahara 未响应（%1），尝试直接连接已有 Firehose…")
+                          .arg(QString::fromUtf8(error.what())));
+        const auto direct = session.firehose->configure(config);
+        if (!direct.ok()) {
+            throw std::runtime_error(
+                QStringLiteral("Sahara 握手失败，且设备不在 Firehose 模式：%1")
+                    .arg(QString::fromUtf8(error.what())).toStdString());
+        }
+        reporter.info(QStringLiteral("设备已在 Firehose 模式，跳过 Sahara 上传"));
+        return session;
+    }
+
     reporter.progress(65, QStringLiteral("Firehose 配置…"));
     const auto configure = session.firehose->configure(config);
     ensureAck(configure, QStringLiteral("Firehose configure"));
@@ -416,7 +438,7 @@ QVariantMap programmerField()
 QVariantMap memoryField()
 {
     return fields::choice(QStringLiteral("memory"), QStringLiteral("存储类型"),
-                          {QStringLiteral("ufs"), QStringLiteral("emmc"), QStringLiteral("spinor"),
+                          {QStringLiteral("emmc"), QStringLiteral("ufs"), QStringLiteral("spinor"),
                            QStringLiteral("nvme"), QStringLiteral("sdcard")},
                           0, QStringLiteral("与设备实际存储一致，否则 Firehose 会拒绝"));
 }
@@ -426,7 +448,7 @@ QVariantMap sectorSizeField()
     return fields::choice(QStringLiteral("sector_size"), QStringLiteral("扇区大小"),
 
                           {QStringLiteral("4096"), QStringLiteral("512"), QStringLiteral("8192")},
-                          0, QStringLiteral("eMMC/UFS 一般为 4096"));
+                          0, QStringLiteral("eMMC 通常 512，UFS 通常 4096"));
 }
 
 void registerSaharaTools()
@@ -474,6 +496,106 @@ void registerSaharaTools()
         spec.order = 90;
         addTool(spec, elfParse);
     }
+}
+
+
+
+QString qedlPath()
+{
+    return util::dataDir() + QStringLiteral("/thirdparty/qedl/qedl.exe");
+}
+
+void runQedl(TaskContext& ctx, const QStringList& args, const QString& title)
+{
+    const QString exe = qedlPath();
+    if (!QFileInfo::exists(exe))
+        throw std::runtime_error("qedl.exe 未随包提供");
+    QProcess process;
+    process.setWorkingDirectory(QFileInfo(exe).absolutePath());
+    process.setProcessChannelMode(QProcess::MergedChannels);
+    ctx.info(QStringLiteral("%1：qedl %2").arg(title, args.join(QLatin1Char(' '))));
+    process.start(exe, args);
+    if (!process.waitForStarted(5000))
+        throw std::runtime_error("无法启动 qedl.exe");
+    while (!process.waitForFinished(500)) {
+        ctx.checkCanceled();
+        if (process.state() == QProcess::NotRunning) break;
+    }
+    if (process.state() != QProcess::NotRunning) {
+        process.kill();
+        process.waitForFinished(1000);
+        throw std::runtime_error("qedl 执行超时");
+    }
+    const QString output = QString::fromLocal8Bit(process.readAll()).trimmed();
+    if (!output.isEmpty()) {
+        for (const QString& line : output.split(QLatin1Char('\n')))
+            if (!line.trimmed().isEmpty()) ctx.info(line.trimmed());
+    }
+    if (process.exitStatus() != QProcess::NormalExit || process.exitCode() != 0)
+        throw std::runtime_error(QStringLiteral("qedl 失败，退出码 %1").arg(process.exitCode()).toStdString());
+}
+
+void qedlGpt(TaskContext& ctx, const QVariantMap& options)
+{
+    QStringList args;
+    const QString loader = options.value(QStringLiteral("programmer")).toString().trimmed();
+    if (!loader.isEmpty()) args << QStringLiteral("--loader") << loader;
+    const QString port = options.value(QStringLiteral("port")).toString().trimmed();
+    if (!port.isEmpty()) args << QStringLiteral("--port") << port;
+    args << QStringLiteral("gpt");
+    runQedl(ctx, args, QStringLiteral("qedl 读取 GPT"));
+    ctx.ok(QStringLiteral("qedl GPT 读取完成"));
+}
+
+void qedlDump(TaskContext& ctx, const QVariantMap& options)
+{
+    const QString partition = options.value(QStringLiteral("partition")).toString().trimmed();
+    const QString output = options.value(QStringLiteral("output")).toString().trimmed();
+    if (partition.isEmpty() || output.isEmpty())
+        throw std::runtime_error("请填写分区名和输出文件");
+    QStringList args;
+    const QString loader = options.value(QStringLiteral("programmer")).toString().trimmed();
+    if (!loader.isEmpty()) args << QStringLiteral("--loader") << loader;
+    const QString port = options.value(QStringLiteral("port")).toString().trimmed();
+    if (!port.isEmpty()) args << QStringLiteral("--port") << port;
+    args << QStringLiteral("dump") << partition << output;
+    runQedl(ctx, args, QStringLiteral("qedl 导出分区"));
+    ctx.ok(QStringLiteral("qedl 已导出 %1 → %2").arg(partition, output));
+}
+
+void qcomPartitionsXml(TaskContext& ctx, const QVariantMap& options)
+{
+    const QString programmerPath = options.value(QStringLiteral("programmer")).toString().trimmed();
+    const QString output = options.value(QStringLiteral("output")).toString().trimmed();
+    if (output.isEmpty())
+        throw std::runtime_error("请选择输出的 rawprogram XML 文件");
+    const QByteArray image = util::readFile(programmerPath);
+    if (image.isEmpty())
+        throw std::runtime_error("无法读取 programmer 文件");
+    auto transport = proto::openTransport(ChipPlatform::Qualcomm, deviceOption(options), {});
+    if (!transport)
+        throw std::runtime_error(proto::noDeviceMessage(ChipPlatform::Qualcomm).toStdString());
+    flows::QcomOptions qopts;
+    const QString memory = options.value(QStringLiteral("memory")).toString().trimmed();
+    if (!memory.isEmpty()) qopts.memoryName = memory;
+    flows::QcomSession session(*transport);
+    session.open(image, qopts);
+    const flows::PartitionTable table = session.partitionTable();
+    if (!table.valid)
+        throw std::runtime_error("设备未返回有效 GPT");
+    QString xml = QStringLiteral("<?xml version=\"1.0\" encoding=\"UTF-8\" ?>\n<data>\n");
+    for (const flows::PartitionInfo& part : table.partitions) {
+        if (part.size == 0) continue;
+        const quint64 sectors = part.size / table.sectorSize;
+        xml += QStringLiteral("  <program SECTOR_SIZE_IN_BYTES=\"%1\" filename=\"\" "
+                              "physical_partition_number=\"0\" start_sector=\"%2\" "
+                              "num_partition_sectors=\"%3\" />\n")
+                   .arg(table.sectorSize).arg(part.offset / table.sectorSize).arg(sectors);
+    }
+    xml += QStringLiteral("</data>\n");
+    if (!util::writeFile(output, xml.toUtf8()))
+        throw std::runtime_error("写入 XML 失败");
+    ctx.ok(QStringLiteral("已生成 rawprogram XML：%1（%2 个分区）").arg(output).arg(table.partitions.size()));
 }
 
 void registerFirehoseTools()
@@ -583,6 +705,53 @@ void registerFirehoseTools()
                        sectorSizeField()};
         spec.order = 60;
         addTool(spec, firehoseErase);
+    }
+
+
+    {
+        ToolSpec spec;
+        spec.id = QStringLiteral("qcom.qedl.gpt");
+        spec.category = QStringLiteral("qcom");
+        spec.group = QStringLiteral("qedl");
+        spec.name = QStringLiteral("qedl 读取 GPT");
+        spec.desc = QStringLiteral("使用开源 qedl 后端握手/加载 loader 并读取 GPT");
+        spec.icon = QStringLiteral("terminal");
+        spec.keywords = {QStringLiteral("qedl"), QStringLiteral("gpt"), QStringLiteral("sahara")};
+        spec.fields = {programmerField(),
+                       fields::text(QStringLiteral("port"), QStringLiteral("COM 端口（可选）"), {}, {}, {}, false)};
+        spec.order = 36;
+        addTool(spec, qedlGpt);
+    }
+    {
+        ToolSpec spec;
+        spec.id = QStringLiteral("qcom.qedl.dump");
+        spec.category = QStringLiteral("qcom");
+        spec.group = QStringLiteral("qedl");
+        spec.name = QStringLiteral("qedl 导出分区");
+        spec.desc = QStringLiteral("使用开源 qedl 后端导出分区为镜像（支持冷启动 loader）");
+        spec.icon = QStringLiteral("download");
+        spec.keywords = {QStringLiteral("qedl"), QStringLiteral("dump"), QStringLiteral("backup")};
+        spec.fields = {programmerField(),
+                       fields::text(QStringLiteral("partition"), QStringLiteral("分区名"), {}),
+                       fields::path(QStringLiteral("output"), QStringLiteral("输出镜像"), QStringLiteral("*.img")),
+                       fields::text(QStringLiteral("port"), QStringLiteral("COM 端口（可选）"), {}, {}, {}, false)};
+        spec.order = 37;
+        addTool(spec, qedlDump);
+    }
+    {
+        ToolSpec spec;
+        spec.id = QStringLiteral("qcom.partitions.xml");
+        spec.category = QStringLiteral("qcom");
+        spec.group = QStringLiteral("firehose");
+        spec.name = QStringLiteral("生成 rawprogram XML");
+        spec.desc = QStringLiteral("读取设备 GPT 并生成 QFIL/QFIL 风格的 rawprogram XML");
+        spec.icon = QStringLiteral("file-code");
+        spec.keywords = {QStringLiteral("xml"), QStringLiteral("rawprogram"), QStringLiteral("qfil")};
+        spec.fields = {deviceField(), programmerField(), memoryField(),
+                       fields::path(QStringLiteral("output"), QStringLiteral("输出 XML"),
+                                    QStringLiteral("*.xml"))};
+        spec.order = 35;
+        addTool(spec, qcomPartitionsXml);
     }
 }
 

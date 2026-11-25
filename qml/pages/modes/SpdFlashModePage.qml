@@ -160,13 +160,13 @@ Item {
                         visible: table.count > 0
                         text: "全选"
                         color: table.allSelected ? Theme.text : Theme.textMuted
-                        font.pixelSize: 10
+                        font.pixelSize: Theme.fs(10)
                     },
                     Text {
                         visible: table.count > 0
                         text: table.selectedCount + " / " + table.count
                         color: Theme.accent
-                        font.pixelSize: 10
+                        font.pixelSize: Theme.fs(10)
                         font.family: "Consolas"
                     }
                 ]
@@ -196,7 +196,7 @@ Item {
 
             // ---- 右侧：FDL 状态 + 操作 + 结果 + 日志
             Item {
-                Layout.preferredWidth: 330
+                Layout.preferredWidth: Math.max(300, Math.min(430, page.width * 0.27))
                 Layout.fillHeight: true
 
                 ColumnLayout {
@@ -205,7 +205,7 @@ Item {
 
                     ModeCard {
                         Layout.fillWidth: true
-                        Layout.preferredHeight: 126
+                        Layout.preferredHeight: Math.max(112, Math.min(146, page.height * 0.17))
                         title: "FDL 状态"
                         icon: "activity"
                         accentColor: page.modeColor
@@ -237,7 +237,7 @@ Item {
 
                     ModeCard {
                         Layout.fillWidth: true
-                        Layout.preferredHeight: 152
+                        Layout.preferredHeight: Math.max(132, Math.min(180, page.height * 0.21))
                         title: "操作"
                         icon: "sliders-horizontal"
                         accentColor: page.modeColor
@@ -301,7 +301,7 @@ RowLayout {
                                 Layout.fillWidth: true
                                 text: table.count > 0 ? ("已选 " + table.selectedCount + " 个分区") : "尚未加载固件"
                                 color: Theme.textMuted
-                                font.pixelSize: 10
+                                font.pixelSize: Theme.fs(10)
                             }
                         }
                     }
@@ -330,7 +330,7 @@ RowLayout {
                                     anchors.centerIn: parent
                                     text: "—"
                                     color: Theme.textMuted
-                                    font.pixelSize: 12
+                                    font.pixelSize: Theme.fs(12)
                                     font.weight: Font.DemiBold
                                 }
                             }
@@ -344,14 +344,14 @@ RowLayout {
                                     width: parent.width
                                     text: "尚无刷机记录"
                                     color: Theme.text
-                                    font.pixelSize: 11
+                                    font.pixelSize: Theme.fs(11)
                                     elide: Text.ElideRight
                                 }
                                 Text {
                                     width: parent.width
                                     text: "执行下载后在这里显示 PASS / FAIL"
                                     color: Theme.textMuted
-                                    font.pixelSize: 10
+                                    font.pixelSize: Theme.fs(10)
                                     elide: Text.ElideRight
                                 }
                             }

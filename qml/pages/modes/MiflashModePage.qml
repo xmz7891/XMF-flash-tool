@@ -209,7 +209,7 @@ Item {
                             anchors.centerIn: parent
                             text: "FASTBOOT"
                             color: Theme.textMuted
-                            font.pixelSize: 8
+                            font.pixelSize: Theme.fs(8)
                             font.weight: Font.DemiBold
                         }
                     }
@@ -239,7 +239,7 @@ Item {
 
             // ---- 右侧：刷机模式 + 设备 + 日志
             Item {
-                Layout.preferredWidth: 330
+                Layout.preferredWidth: Math.max(300, Math.min(430, page.width * 0.27))
                 Layout.fillHeight: true
 
                 ColumnLayout {
@@ -248,7 +248,7 @@ Item {
 
                     ModeCard {
                         Layout.fillWidth: true
-                        Layout.preferredHeight: 250
+                        Layout.preferredHeight: Math.max(210, Math.min(280, page.height * 0.34))
                         title: "刷机模式"
                         icon: "sliders-horizontal"
                         accentColor: page.modeColor
@@ -306,14 +306,14 @@ Item {
                                             Text {
                                                 text: modelData.name
                                                 color: page.modeIndex === index ? Theme.text : Theme.textSub
-                                                font.pixelSize: 11
+                                                font.pixelSize: Theme.fs(11)
                                                 font.weight: Font.Medium
                                             }
                                             Text {
                                                 width: parent.width
                                                 text: modelData.desc
                                                 color: Theme.textMuted
-                                                font.pixelSize: 10
+                                                font.pixelSize: Theme.fs(10)
                                                 elide: Text.ElideRight
                                             }
                                         }
@@ -350,7 +350,7 @@ Item {
                                     Layout.alignment: Qt.AlignVCenter
                                     text: "刷写前校验镜像哈希"
                                     color: Theme.textSub
-                                    font.pixelSize: 10
+                                    font.pixelSize: Theme.fs(10)
                                     elide: Text.ElideRight
                                 }
                                 ToggleSwitch {
@@ -365,7 +365,7 @@ Item {
 
                     ModeCard {
                         Layout.fillWidth: true
-                        Layout.preferredHeight: 120
+                        Layout.preferredHeight: Math.max(108, Math.min(140, page.height * 0.16))
                         title: "设备"
                         icon: "usb"
                         accentColor: page.modeColor
@@ -395,7 +395,7 @@ Item {
                                 Layout.fillWidth: true
                                 text: "端口 COM — · 驱动待检测"
                                 color: Theme.textMuted
-                                font.pixelSize: 10
+                                font.pixelSize: Theme.fs(10)
                             }
                         }
                     }

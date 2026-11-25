@@ -2,9 +2,11 @@
 
 #include "AwFlow.h"
 #include "FlowOps.h"
+#include "device/AdbClient.h"
 #include "MtkFlow.h"
 #include "PartitionTable.h"
 #include "QcomFlow.h"
+#include "qcom/QedlBootstrap.h"
 #include "RkFlow.h"
 #include "SprdFlow.h"
 
@@ -139,6 +141,13 @@ QcomHandle openQcom(const QVariantMap& options, const proto::Reporter& reporter)
         flowOptions.memoryName = memory;
     flowOptions.maxPayloadBytes =
         proto::optionInt(options, QStringLiteral("max_payload"), 1024 * 1024);
+
+    // Cold 9008: use the open-source qedl backend to upload the Sahara loader
+    // before opening our Firehose transport. This is a no-op when already in
+    // Firehose (qedl merely reads GPT and exits).
+    QString qedlError;
+    if (!qcom::bootstrapLoader(programmer, deviceOption(options), &qedlError))
+        reporter.debug(QStringLiteral("qedl bootstrap skipped: %1").arg(qedlError));
 
     QcomHandle handle;
     handle.transport = proto::openTransport(ChipPlatform::Qualcomm, deviceOption(options), reporter);
@@ -400,6 +409,59 @@ void qcomErase(TaskContext& ctx, const QVariantMap& options)
     });
 }
 
+
+// ---------------------------------------------------------------------------
+// Qualcomm wipe: quick user-data wipe / protected full wipe.
+// ---------------------------------------------------------------------------
+bool isProtectedQcomPartition(const QString& name)
+{
+    static const QStringList protectedPrefixes = {
+        QStringLiteral("xbl"), QStringLiteral("tz"), QStringLiteral("hyp"),
+        QStringLiteral("rpm"), QStringLiteral("pmic"), QStringLiteral("gpt"),
+        QStringLiteral("bootloader"), QStringLiteral("devinfo"), QStringLiteral("modem"),
+        QStringLiteral("persist"), QStringLiteral("misc"), QStringLiteral("abl"),
+        QStringLiteral("aop"), QStringLiteral("keymaster"), QStringLiteral("qupfw")
+    };
+    const QString lower = name.toLower();
+    for (const QString& prefix : protectedPrefixes)
+        if (lower == prefix || lower.startsWith(prefix))
+            return true;
+    return false;
+}
+
+void qcomWipe(TaskContext& ctx, const QVariantMap& options)
+{
+    proto::runGuarded(ctx, [&] {
+        const auto reporter = proto::reporterFor(ctx);
+        if (!proto::optionBool(options, QStringLiteral("confirm"), false))
+            throw std::runtime_error("擦除不可恢复，请先勾选「确认擦除」");
+        auto handle = openQcom(options, reporter);
+        QcomFirehoseIo io(*handle.session);
+        const bool full = proto::optionString(options, QStringLiteral("mode"))
+                              .contains(QStringLiteral("full"), Qt::CaseInsensitive);
+        QStringList names;
+        if (full) {
+            for (const PartitionInfo& part : io.table().partitions) {
+                if (part.size == 0 || isProtectedQcomPartition(part.name))
+                    continue;
+                names.append(part.name);
+            }
+        } else {
+            for (const QString& name : {QStringLiteral("userdata"), QStringLiteral("metadata"),
+                                        QStringLiteral("cache"), QStringLiteral("frp")}) {
+                if (io.table().find(name))
+                    names.append(name);
+            }
+        }
+        if (names.isEmpty())
+            throw std::runtime_error("没有可安全擦除的分区");
+        ctx.warn(QStringLiteral("即将擦除 %1 个分区（已保护 bootloader/modem/persist 等关键分区）")
+                     .arg(names.size()));
+        erasePartitions(io, names, reporter);
+        ctx.ok(QStringLiteral("擦除完成：%1").arg(names.join(QStringLiteral(", "))));
+    });
+}
+
 void qcomRaw(TaskContext& ctx, const QVariantMap& options)
 {
     proto::runGuarded(ctx, [&] {
@@ -458,6 +520,37 @@ void qcomChecksum(TaskContext& ctx, const QVariantMap& options)
         } else {
             ctx.ok(QStringLiteral("校验完成"));
         }
+    });
+}
+
+
+void qcomReboot(TaskContext& ctx, const QVariantMap& options)
+{
+    proto::runGuarded(ctx, [&] {
+        const auto reporter = proto::reporterFor(ctx);
+        const QString target = proto::optionString(options, QStringLiteral("target"),
+                                                   QStringLiteral("system")).toLower();
+        auto handle = openQcom(options, reporter);
+        ctx.info(QStringLiteral("Firehose reset…"));
+        handle.session->firehose().reset();
+        if (target == QLatin1String("system") || target == QLatin1String("android")) {
+            ctx.ok(QStringLiteral("已重启到系统"));
+            return;
+        }
+        // The device reboots out of 9008 first; wait for ADB, then switch mode.
+        ctx.info(QStringLiteral("等待设备重新进入 Android/ADB…"));
+        const auto wait = device::AdbClient::waitForDevice(QString(), 120000);
+        if (!wait.ok)
+            throw std::runtime_error(QStringLiteral("设备未重新进入 ADB：%1").arg(wait.error).toStdString());
+        QString serial = device::AdbClient::resolveSerial(QString());
+        const QString mode = target == QLatin1String("fastboot") ? QStringLiteral("bootloader")
+                             : target == QLatin1String("recovery") ? QStringLiteral("recovery")
+                             : target == QLatin1String("9008") || target == QLatin1String("edl")
+                                 ? QStringLiteral("edl") : target;
+        const auto result = device::AdbClient::reboot(serial, mode);
+        if (!result.ok)
+            throw std::runtime_error(QStringLiteral("切换模式失败：%1").arg(result.error).toStdString());
+        ctx.ok(QStringLiteral("已请求重启到 %1").arg(target));
     });
 }
 
@@ -1187,6 +1280,19 @@ void registerQcomFlowTools()
                        confirmField(QStringLiteral("确认擦除"))};
         addTool(spec, qcomErase);
     }
+
+    {
+        auto spec = baseSpec(QStringLiteral("qcom.flow.wipe"),
+                             QStringLiteral("qcom"), QStringLiteral("QCOM 安全擦除"),
+                             QStringLiteral("快速擦除用户数据，或完整擦除用户分区（自动保护关键分区）"),
+                             QStringLiteral("zap"), 209);
+        spec.fields = {deviceField(), packetField(), modelField(), programmerField(), memoryField(),
+                       fields::choice(QStringLiteral("mode"), QStringLiteral("擦除模式"),
+                                      {QStringLiteral("quick — 快速用户数据"),
+                                       QStringLiteral("full — 完整用户分区（保护关键分区）")}, 0),
+                       confirmField(QStringLiteral("确认擦除"))};
+        addTool(spec, qcomWipe);
+    }
     {
         auto spec = baseSpec(QStringLiteral("qcom.flow.raw"),
                              QStringLiteral("qcom"), QStringLiteral("QCOM 偏移读写"),
@@ -1204,6 +1310,20 @@ void registerQcomFlowTools()
                        pathField(QStringLiteral("output"), QStringLiteral("输出文件（读取时）"),
                                  QStringLiteral("*.bin"))};
         addTool(spec, qcomRaw);
+    }
+
+    {
+        auto spec = baseSpec(QStringLiteral("qcom.flow.reboot"),
+                             QStringLiteral("qcom"), QStringLiteral("QCOM 重启切换"),
+                             QStringLiteral("从 9008 reset，再通过 ADB 切换到系统/Fastboot/Recovery/9008"),
+                             QStringLiteral("rotate-ccw"), 210);
+        spec.fields = {deviceField(), packetField(), modelField(), programmerField(), memoryField(),
+                       fields::choice(QStringLiteral("target"), QStringLiteral("目标模式"),
+                                      {QStringLiteral("system — 系统"),
+                                       QStringLiteral("fastboot — Fastboot"),
+                                       QStringLiteral("recovery — Recovery"),
+                                       QStringLiteral("9008 — EDL")}, 0)};
+        addTool(spec, qcomReboot);
     }
     {
         auto spec = baseSpec(QStringLiteral("qcom.flow.slot"),

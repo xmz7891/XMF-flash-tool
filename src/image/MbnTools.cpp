@@ -3,9 +3,11 @@
 #include "ElfFormat.h"
 #include "OplusDigest.h"
 #include "QcomMapping.h"
+#include "AmlogicImage.h"
 #include "core/Util.h"
 
 #include <QFileInfo>
+#include <QProcess>
 #include <QtEndian>
 #include <QCryptographicHash>
 #include <QSslCertificate>
@@ -346,6 +348,120 @@ void oplusDigestInfo(TaskContext& ctx, const QVariantMap& options)
     ctx.ok(QStringLiteral("Oplus digest parsed: %1 partition(s)").arg(d.partitions.size()));
 }
 
+
+void amlogicImageInfo(TaskContext& ctx, const QVariantMap& options)
+{
+    const QString path = options.value(QStringLiteral("input")).toString().trimmed();
+    if (path.isEmpty()) throw std::runtime_error("select an Amlogic USB Burning image");
+    const QByteArray data = util::readFile(path);
+    if (data.isEmpty()) throw std::runtime_error("cannot read image");
+    const img::amlogic::Image image = img::amlogic::parse(data);
+    if (!image.valid) throw std::runtime_error(image.error.toStdString());
+    ctx.info(img::amlogic::describe(image));
+    for (const auto& item : image.items) {
+        ctx.info(QStringLiteral("%1.%2  offset=0x%3  size=0x%4  verify=%5")
+                     .arg(item.subType, item.mainType)
+                     .arg(item.offset, 0, 16).arg(item.size, 0, 16).arg(item.verify));
+    }
+    ctx.ok(QStringLiteral("Amlogic burning image parsed: %1 item(s)").arg(image.items.size()));
+}
+
+
+void amlogicImageExtract(TaskContext& ctx, const QVariantMap& options)
+{
+    const QString path = options.value(QStringLiteral("input")).toString().trimmed();
+    const QString output = options.value(QStringLiteral("output")).toString().trimmed();
+    if (path.isEmpty() || output.isEmpty())
+        throw std::runtime_error("select an Amlogic image and an output directory");
+    const QByteArray data = util::readFile(path);
+    if (data.isEmpty()) throw std::runtime_error("cannot read image");
+    const img::amlogic::Image image = img::amlogic::parse(data);
+    if (!image.valid) throw std::runtime_error(image.error.toStdString());
+    if (!util::ensureDir(output))
+        throw std::runtime_error("cannot create output directory");
+    int written = 0;
+    QStringList commands;
+    for (const auto& item : image.items) {
+        QString name = item.subType;
+        if (!item.mainType.isEmpty()) name += QLatin1Char('.') + item.mainType;
+        if (name.isEmpty()) name = QStringLiteral("item_%1.bin").arg(item.id);
+        name.replace(QLatin1Char('/'), QLatin1Char('_'));
+        name.replace(QLatin1Char('\\'), QLatin1Char('_'));
+        const QString outPath = output + QLatin1Char('/') + name;
+        if (!util::writeFile(outPath, data.mid(int(item.offset), int(item.size))))
+            throw std::runtime_error(QStringLiteral("write failed: %1").arg(outPath).toStdString());
+        ctx.info(QStringLiteral("%1 → %2（%3 字节）").arg(name, outPath).arg(item.size));
+        commands.append(QStringLiteral("%1:%2:%3:%4")
+                            .arg(item.mainType.isEmpty() ? QStringLiteral("UNKNOWN") : item.mainType,
+                                 item.subType.isEmpty() ? QStringLiteral("UNKNOWN") : item.subType,
+                                 item.fileType == 0xFE ? QStringLiteral("sparse") : QStringLiteral("normal"),
+                                 name));
+        ++written;
+    }
+    util::writeFile(output + QStringLiteral("/commands.txt"),
+                    (commands.join(QLatin1Char('\n')) + QLatin1Char('\n')).toUtf8());
+    ctx.ok(QStringLiteral("Amlogic image extracted: %1 file(s)").arg(written));
+}
+
+
+void amlogicUpdate(TaskContext& ctx, const QVariantMap& options)
+{
+    const QString img = options.value(QStringLiteral("img")).toString().trimmed();
+    if (img.isEmpty()) throw std::runtime_error("select an Amlogic USB Burning image");
+    if (!QFileInfo::exists(img)) throw std::runtime_error("Amlogic image not found");
+    const QString exe = util::dataDir() + QStringLiteral("/thirdparty/amlogic/update.exe");
+    if (!QFileInfo::exists(exe)) throw std::runtime_error("Amlogic update.exe is not bundled");
+    QStringList args;
+    args << QStringLiteral("--img=") + img;
+    const QString parts = options.value(QStringLiteral("parts")).toString().trimmed();
+    args << QStringLiteral("--parts=") + (parts.isEmpty() ? QStringLiteral("all") : parts);
+    const QString soc = options.value(QStringLiteral("soc")).toString().trimmed();
+    if (!soc.isEmpty()) args << QStringLiteral("--soc=") + soc;
+    if (options.value(QStringLiteral("wipe")).toBool()) args << QStringLiteral("--wipe");
+    if (options.value(QStringLiteral("reset")).toBool()) args << QStringLiteral("--reset=y");
+    ctx.info(QStringLiteral("调用 Amlogic update.exe：%1").arg(args.join(QLatin1Char(' '))));
+    QProcess process;
+    process.setWorkingDirectory(QFileInfo(exe).absolutePath());
+    process.setProcessChannelMode(QProcess::MergedChannels);
+    process.start(exe, args);
+    if (!process.waitForStarted(5000))
+        throw std::runtime_error("无法启动 Amlogic update.exe");
+    while (!process.waitForFinished(500)) {
+        ctx.checkCanceled();
+        if (process.state() == QProcess::NotRunning) break;
+    }
+    if (process.state() != QProcess::NotRunning) {
+        process.kill();
+        process.waitForFinished(1000);
+        throw std::runtime_error("Amlogic update 超时");
+    }
+    const QString output = QString::fromLocal8Bit(process.readAll()).trimmed();
+    if (!output.isEmpty()) {
+        for (const QString& line : output.split(QLatin1Char('\n')))
+            if (!line.trimmed().isEmpty()) ctx.info(line.trimmed());
+    }
+    if (process.exitStatus() != QProcess::NormalExit || process.exitCode() != 0)
+        throw std::runtime_error(QStringLiteral("Amlogic update 失败，退出码 %1").arg(process.exitCode()).toStdString());
+    ctx.ok(QStringLiteral("Amlogic 烧写命令已完成"));
+}
+
+
+void amlogicImagePack(TaskContext& ctx, const QVariantMap& options)
+{
+    const QString dir = options.value(QStringLiteral("input")).toString().trimmed();
+    const QString output = options.value(QStringLiteral("output")).toString().trimmed();
+    if (dir.isEmpty() || output.isEmpty())
+        throw std::runtime_error("select an extracted directory and an output .img");
+    QString error;
+    if (!img::amlogic::packDirectory(dir, output, &error))
+        throw std::runtime_error(error.toStdString());
+    const QByteArray data = util::readFile(output);
+    const img::amlogic::Image image = img::amlogic::parse(data);
+    if (!image.valid) throw std::runtime_error(image.error.toStdString());
+    ctx.info(img::amlogic::describe(image));
+    ctx.ok(QStringLiteral("Amlogic image packed: %1").arg(output));
+}
+
 void registerMbnTools()
 {
     using namespace gf::fields;
@@ -374,5 +490,66 @@ void registerMbnTools()
                          QStringLiteral("*.mbn *.elf *.*"))};
     oplus.order = 95;
     addTool(oplus, oplusDigestInfo);
+
+    ToolSpec aml;
+    aml.id = QStringLiteral("amlogic.image.info");
+    aml.category = QStringLiteral("firmware");
+    aml.group = QStringLiteral("tool");
+    aml.name = QStringLiteral("Amlogic burning image");
+    aml.desc = QStringLiteral("Parse Amlogic USB Burning .img header and item table");
+    aml.icon = QStringLiteral("file-archive");
+    aml.keywords = {QStringLiteral("amlogic"), QStringLiteral("worldcup"), QStringLiteral("burning")};
+    aml.fields = {path(QStringLiteral("input"), QStringLiteral("Amlogic .img"), QStringLiteral("*.img *.*"))};
+    aml.order = 96;
+    addTool(aml, amlogicImageInfo);
+
+    ToolSpec amlExtract;
+    amlExtract.id = QStringLiteral("amlogic.image.extract");
+    amlExtract.category = QStringLiteral("firmware");
+    amlExtract.group = QStringLiteral("tool");
+    amlExtract.name = QStringLiteral("Amlogic image extract");
+    amlExtract.desc = QStringLiteral("Extract partitions from an Amlogic USB Burning .img");
+    amlExtract.icon = QStringLiteral("package-open");
+    amlExtract.keywords = {QStringLiteral("amlogic"), QStringLiteral("img"), QStringLiteral("extract")};
+    amlExtract.fields = {path(QStringLiteral("input"), QStringLiteral("Amlogic .img"), QStringLiteral("*.img")),
+                         dir(QStringLiteral("output"), QStringLiteral("输出目录"))};
+    amlExtract.order = 97;
+    addTool(amlExtract, amlogicImageExtract);
+
+    ToolSpec amlUpdate;
+    amlUpdate.id = QStringLiteral("amlogic.update");
+    amlUpdate.category = QStringLiteral("firmware");
+    amlUpdate.group = QStringLiteral("tool");
+    amlUpdate.name = QStringLiteral("Amlogic USB Burn");
+    amlUpdate.desc = QStringLiteral("Call bundled Amlogic update.exe to burn an Amlogic USB Burning image");
+    amlUpdate.icon = QStringLiteral("flame");
+    amlUpdate.keywords = {QStringLiteral("amlogic"), QStringLiteral("worldcup"), QStringLiteral("burn")};
+    amlUpdate.fields = {path(QStringLiteral("img"), QStringLiteral("Amlogic .img"), QStringLiteral("*.img")),
+                        text(QStringLiteral("parts"), QStringLiteral("分区"), QStringLiteral("all"),
+                             QStringLiteral("all / bootloader / boot / system ...")),
+                        choice(QStringLiteral("soc"), QStringLiteral("SoC"),
+                               {QStringLiteral("gxl"), QStringLiteral("axg"), QStringLiteral("txlx"),
+                                QStringLiteral("g12a"), QStringLiteral("m8")}, 0),
+                        boolean(QStringLiteral("wipe"), QStringLiteral("擦除"), false),
+                        boolean(QStringLiteral("reset"), QStringLiteral("完成后重启"), false)};
+    amlUpdate.order = 98;
+    addTool(amlUpdate, amlogicUpdate);
+
+    ToolSpec amlPack;
+    amlPack.id = QStringLiteral("amlogic.image.pack");
+    amlPack.category = QStringLiteral("firmware");
+    amlPack.group = QStringLiteral("tool");
+    amlPack.name = QStringLiteral("Amlogic image pack");
+    amlPack.desc = QStringLiteral("Pack an extracted Amlogic image directory back into a USB Burning .img");
+    amlPack.icon = QStringLiteral("package");
+    amlPack.keywords = {QStringLiteral("amlogic"), QStringLiteral("pack"), QStringLiteral("img")};
+    amlPack.fields = {dir(QStringLiteral("input"), QStringLiteral("解包目录")),
+                      path(QStringLiteral("output"), QStringLiteral("输出 .img"), QStringLiteral("*.img"))};
+    amlPack.order = 99;
+    addTool(amlPack, amlogicImagePack);
+
+
+
+
 }
 } // namespace gf

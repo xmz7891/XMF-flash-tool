@@ -41,6 +41,10 @@ Item {
               { key: "fastboot:aw", title: "Fastboot 模式", desc: "刷 boot / recovery / 分区镜像" },
               { key: "recovery:aw", title: "Recovery 模式", desc: "ADB sideload 卡刷 zip" },
               { key: "phoenixsuit", title: "FEL 模式", desc: "FEL 深度刷机（PhoenixSuit）" }
+          ] },
+        { id: "amlogic", name: "Amlogic 晶晨", sub: "S905 / S922 / 机顶盒", icon: "cpu",
+          modes: [
+              { key: "amlogic-burn", title: "USB Burning 模式", desc: "WorldCup / ADNL USB 刷机" }
           ] }
     ]
 
@@ -77,6 +81,8 @@ Item {
             page.openFlashMode("rkdevtool")
         else if (mode === "aw-fel")
             page.openFlashMode("phoenixsuit")
+        else if (mode === "amlogic-burn")
+            page.openModePage("amlogic-burn")
         else
             App.notify("info", "当前没有检测到可刷机的设备模式，请手动选择左侧平台")
     }
@@ -223,18 +229,18 @@ Item {
                     spacing: 1
                     Row {
                         spacing: 8
-                        Text { text: "当前设备"; color: Theme.textMuted; font.pixelSize: 10 }
+                        Text { text: "当前设备"; color: Theme.textMuted; font.pixelSize: Theme.fs(10) }
                         Text {
                             text: App.deviceMode.label || "未检测到设备"
                             color: Theme.text
-                            font.pixelSize: 15
+                            font.pixelSize: Theme.fs(15)
                             font.weight: Font.DemiBold
                         }
                     }
                     Text {
                         text: App.deviceMode.detail || "连接设备后自动识别模式"
                         color: Theme.textMuted
-                        font.pixelSize: 10
+                        font.pixelSize: Theme.fs(10)
                         elide: Text.ElideRight
                         width: parent.width
                     }
@@ -242,7 +248,7 @@ Item {
 
                 CheckBox {
                     text: "自动切换到对应刷机模式"
-                    font.pixelSize: 11
+                    font.pixelSize: Theme.fs(11)
                     checked: page.autoSwitch
                     anchors.verticalCenter: parent.verticalCenter
                     onToggled: {
@@ -325,7 +331,7 @@ Item {
                                         width: parent.width
                                         text: modelData.name
                                         color: Theme.text
-                                        font.pixelSize: 12
+                                        font.pixelSize: Theme.fs(12)
                                         font.weight: Font.DemiBold
                                         elide: Text.ElideRight
                                     }
@@ -333,7 +339,7 @@ Item {
                                         width: parent.width
                                         text: modelData.sub
                                         color: Theme.textMuted
-                                        font.pixelSize: 9
+                                        font.pixelSize: Theme.fs(9)
                                         elide: Text.ElideRight
                                     }
                                 }
@@ -403,13 +409,13 @@ Item {
                                     Text {
                                         text: modelData.title
                                         color: Theme.text
-                                        font.pixelSize: 15
+                                        font.pixelSize: Theme.fs(15)
                                         font.weight: Font.DemiBold
                                     }
                                     Text {
                                         text: modelData.desc
                                         color: Theme.textMuted
-                                        font.pixelSize: 11
+                                        font.pixelSize: Theme.fs(11)
                                         elide: Text.ElideRight
                                         width: parent.width
                                     }
@@ -485,7 +491,7 @@ Item {
                                         width: parent.width
                                         text: modelData.description || modelData.portName || "USB device"
                                         color: Theme.text
-                                        font.pixelSize: 11
+                                        font.pixelSize: Theme.fs(11)
                                         elide: Text.ElideRight
                                     }
                                     Text {
@@ -493,7 +499,7 @@ Item {
                                         text: (modelData.portName || "") + " · "
                                               + (modelData.chipLabel || modelData.kindLabel || "")
                                         color: Theme.textMuted
-                                        font.pixelSize: 9
+                                        font.pixelSize: Theme.fs(9)
                                         elide: Text.ElideRight
                                     }
                                 }
@@ -549,7 +555,7 @@ Item {
                             anchors.verticalCenter: parent.verticalCenter
                             text: "也可把固件/镜像拖进本页（tgz / pac / scatter / RKFW / IMAGEWTY / GPT）"
                             color: Theme.textMuted
-                            font.pixelSize: 10
+                            font.pixelSize: Theme.fs(10)
                         }
                     }
 
@@ -558,10 +564,10 @@ Item {
                     Row {
                         width: parent.width
                         height: 20
-                        Text { width: parent.width * 0.32; text: "名称"; color: Theme.textMuted; font.pixelSize: 10 }
-                        Text { width: parent.width * 0.2; text: "大小"; color: Theme.textMuted; font.pixelSize: 10 }
-                        Text { width: parent.width * 0.24; text: "地址 / 设备节点"; color: Theme.textMuted; font.pixelSize: 10 }
-                        Text { width: parent.width * 0.24; text: "区域 / 文件"; color: Theme.textMuted; font.pixelSize: 10 }
+                        Text { width: parent.width * 0.32; text: "名称"; color: Theme.textMuted; font.pixelSize: Theme.fs(10) }
+                        Text { width: parent.width * 0.2; text: "大小"; color: Theme.textMuted; font.pixelSize: Theme.fs(10) }
+                        Text { width: parent.width * 0.24; text: "地址 / 设备节点"; color: Theme.textMuted; font.pixelSize: Theme.fs(10) }
+                        Text { width: parent.width * 0.24; text: "区域 / 文件"; color: Theme.textMuted; font.pixelSize: Theme.fs(10) }
                     }
 
                     Item {
@@ -594,7 +600,7 @@ Item {
                                         width: parent.width * 0.32
                                         text: modelData.name || ""
                                         color: Theme.text
-                                        font.pixelSize: 11
+                                        font.pixelSize: Theme.fs(11)
                                         elide: Text.ElideRight
                                         anchors.verticalCenter: parent.verticalCenter
                                     }
@@ -602,7 +608,7 @@ Item {
                                         width: parent.width * 0.2
                                         text: modelData.sizeText || "—"
                                         color: Theme.textSub
-                                        font.pixelSize: 11
+                                        font.pixelSize: Theme.fs(11)
                                         anchors.verticalCenter: parent.verticalCenter
                                     }
                                     Text {
@@ -610,7 +616,7 @@ Item {
                                         text: modelData.address && modelData.address !== "0x0"
                                               ? modelData.address : (modelData.file || "")
                                         color: Theme.textMuted
-                                        font.pixelSize: 10
+                                        font.pixelSize: Theme.fs(10)
                                         elide: Text.ElideRight
                                         anchors.verticalCenter: parent.verticalCenter
                                     }
@@ -618,7 +624,7 @@ Item {
                                         width: parent.width * 0.24
                                         text: modelData.region || modelData.detail || ""
                                         color: Theme.textMuted
-                                        font.pixelSize: 10
+                                        font.pixelSize: Theme.fs(10)
                                         elide: Text.ElideRight
                                         anchors.verticalCenter: parent.verticalCenter
                                     }
@@ -666,7 +672,7 @@ Item {
                 anchors.centerIn: parent
                 text: "松开以解析固件（tgz / pac / scatter / RKFW / IMAGEWTY / GPT 镜像）"
                 color: Theme.accent
-                font.pixelSize: 14
+                font.pixelSize: Theme.fs(14)
                 font.weight: Font.DemiBold
             }
         }

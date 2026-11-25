@@ -1,5 +1,9 @@
 #include "FirmwareWorkspace.h"
 
+#include "flows/QcomFlow.h"
+#include "qcom/QedlBootstrap.h"
+#include "usb/ProtocolSupport.h"
+
 #include "Util.h"
 #include "device/AdbClient.h"
 #include "device/FastbootClient.h"
@@ -12,6 +16,7 @@
 
 #include <QFile>
 #include <QFileInfo>
+#include <QXmlStreamReader>
 
 namespace gf {
 
@@ -255,6 +260,90 @@ QVariantMap FirmwareWorkspace::loadMiFlashPackage(const QString& path)
                                  .arg(partitions.size())
                                  .arg(util::formatBytes(info.size()));
     return resultWith(QStringLiteral("miflash-tgz"), QStringLiteral("线刷包镜像"), subtitle, partitions);
+}
+
+
+
+QVariantMap FirmwareWorkspace::loadRawprogramXml(const QString& path)
+{
+    QFile file(path);
+    if (!file.open(QIODevice::ReadOnly))
+        return emptyResult(QStringLiteral("无法打开 rawprogram XML：%1").arg(path));
+    QXmlStreamReader xml(&file);
+    QVariantList rows;
+    quint64 sectorSize = 4096;
+    while (!xml.atEnd()) {
+        xml.readNext();
+        if (!xml.isStartElement() || xml.name() != QLatin1String("program"))
+            continue;
+        const auto attrs = xml.attributes();
+        const QString fileAttr = attrs.value(QStringLiteral("filename")).toString();
+        QString label = attrs.value(QStringLiteral("label")).toString();
+        if (label.isEmpty()) {
+            label = QFileInfo(fileAttr).completeBaseName();
+        }
+        if (label.isEmpty())
+            label = QStringLiteral("partition_%1").arg(rows.size() + 1);
+        const quint64 start = attrs.value(QStringLiteral("start_sector")).toULongLong();
+        const quint64 count = attrs.value(QStringLiteral("num_partition_sectors")).toULongLong();
+        const quint64 ss = attrs.value(QStringLiteral("SECTOR_SIZE_IN_BYTES")).toULongLong();
+        if (ss > 0) sectorSize = ss;
+        QVariantMap row = partitionRow(label, count * (ss > 0 ? ss : 4096),
+                                       QString::number(start), fileAttr, QStringLiteral("rawprogram"),
+                                       false);
+        row.insert(QStringLiteral("lun"), attrs.value(QStringLiteral("physical_partition_number")).toString());
+        row.insert(QStringLiteral("index"), rows.size() + 1);
+        row.insert(QStringLiteral("startSector"), QString::number(start));
+        rows.append(row);
+    }
+    if (xml.hasError())
+        return emptyResult(QStringLiteral("XML 解析失败：%1").arg(xml.errorString()));
+    if (rows.isEmpty())
+        return emptyResult(QStringLiteral("XML 中没有 <program> 条目"));
+    return resultWith(QStringLiteral("rawprogram"), QStringLiteral("rawprogram XML"),
+                      QStringLiteral("%1 个分区 · %2 字节扇区").arg(rows.size()).arg(sectorSize), rows);
+}
+
+QVariantMap FirmwareWorkspace::loadQcomPartitions(const QString& programmer, const QString& memory)
+{
+    const QString path = programmer.trimmed();
+    if (path.isEmpty())
+        return emptyResult(QStringLiteral("请先选择 Qualcomm Firehose programmer（Loader）"));
+    const QByteArray image = util::readFile(path);
+    if (image.isEmpty())
+        return emptyResult(QStringLiteral("无法读取 programmer：%1").arg(path));
+    try {
+        QString qedlError;
+        qcom::bootstrapLoader(path, QString(), &qedlError);
+        auto transport = proto::openTransport(usb::ChipPlatform::Qualcomm, {}, {});
+        if (!transport)
+            return emptyResult(proto::noDeviceMessage(usb::ChipPlatform::Qualcomm));
+        flows::QcomOptions options;
+        if (!memory.trimmed().isEmpty())
+            options.memoryName = memory.trimmed();
+        flows::QcomSession session(*transport);
+        session.open(image, options);
+        const flows::PartitionTable table = session.partitionTable();
+        if (!table.valid || table.partitions.isEmpty())
+            return emptyResult(QStringLiteral("设备未返回有效 GPT 分区表"));
+        QVariantList rows;
+        for (const flows::PartitionInfo& part : table.partitions) {
+            QVariantMap row = partitionRow(part.name, part.size, QStringLiteral("0x%1").arg(part.offset, 0, 16),
+                                           QString(), part.type, false);
+            row.insert(QStringLiteral("lun"), 0);
+            row.insert(QStringLiteral("index"), part.index + 1);
+            row.insert(QStringLiteral("startSector"),
+                       table.sectorSize > 0 ? QString::number(part.offset / table.sectorSize) : QString());
+            rows.append(row);
+        }
+        const QString subtitle = QStringLiteral("9008 Firehose · %1 · %2 个分区 · %3 字节扇区")
+                                     .arg(table.storageType.isEmpty() ? memory : table.storageType)
+                                     .arg(rows.size())
+                                     .arg(table.sectorSize);
+        return resultWith(QStringLiteral("qcom"), QStringLiteral("Qualcomm GPT 分区表"), subtitle, rows);
+    } catch (const std::exception& error) {
+        return emptyResult(QString::fromUtf8(error.what()));
+    }
 }
 
 QVariantMap FirmwareWorkspace::loadRkFirmware(const QString& path)

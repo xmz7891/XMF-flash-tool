@@ -5,7 +5,7 @@ import XMF
 // Compact square checkbox matching the console density.
 CheckBox {
     id: root
-    font.pixelSize: 10
+    font.pixelSize: Theme.fs(10)
     spacing: 6
     leftPadding: 0
 
@@ -38,7 +38,7 @@ CheckBox {
         leftPadding: root.indicator.width + root.spacing
         text: root.text
         color: root.checked ? Theme.text : Theme.textSub
-        font.pixelSize: 10
+        font.pixelSize: Theme.fs(10)
         verticalAlignment: Text.AlignVCenter
     }
 }

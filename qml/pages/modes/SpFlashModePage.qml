@@ -163,13 +163,13 @@ Item {
                         visible: table.count > 0
                         text: "全选"
                         color: table.allSelected ? Theme.text : Theme.textMuted
-                        font.pixelSize: 10
+                        font.pixelSize: Theme.fs(10)
                     },
                     Text {
                         visible: table.count > 0
                         text: table.selectedCount + " / " + table.count
                         color: Theme.accent
-                        font.pixelSize: 10
+                        font.pixelSize: Theme.fs(10)
                         font.family: "Consolas"
                     }
                 ]
@@ -199,7 +199,7 @@ Item {
 
             // ---- 右侧：下载操作 + BROM 状态 + 日志
             Item {
-                Layout.preferredWidth: 330
+                Layout.preferredWidth: Math.max(300, Math.min(420, page.width * 0.27))
                 Layout.fillHeight: true
 
                 ColumnLayout {
@@ -208,7 +208,7 @@ Item {
 
                     ModeCard {
                         Layout.fillWidth: true
-                        Layout.preferredHeight: 240
+                        Layout.preferredHeight: Math.max(210, Math.min(260, page.height * 0.30))
                         title: "下载操作"
                         icon: "download"
                         accentColor: page.modeColor
@@ -281,7 +281,7 @@ Item {
                                     Layout.alignment: Qt.AlignVCenter
                                     text: "下载前校验镜像"
                                     color: Theme.textSub
-                                    font.pixelSize: 10
+                                    font.pixelSize: Theme.fs(10)
                                     elide: Text.ElideRight
                                 }
                                 ToggleSwitch {
@@ -296,7 +296,7 @@ Item {
 
                     ModeCard {
                         Layout.fillWidth: true
-                        Layout.preferredHeight: 136
+                        Layout.preferredHeight: Math.max(120, Math.min(150, page.height * 0.18))
                         title: "BROM 状态"
                         icon: "cpu"
                         accentColor: page.modeColor
@@ -330,7 +330,7 @@ Item {
                                 Layout.fillWidth: true
                                 text: "端口 COM — · 波特率 460800"
                                 color: Theme.textMuted
-                                font.pixelSize: 10
+                                font.pixelSize: Theme.fs(10)
                             }
                         }
                     }

@@ -42,6 +42,14 @@ $windeployqt = Join-Path $env:XMF_QT_ROOT 'bin\windeployqt.exe'
     --qmldir (Join-Path $root 'qml') (Join-Path $appDir 'XMF.exe') | Out-Host
 if ($LASTEXITCODE -ne 0) { throw 'windeployqt failed' }
 
+# ---- Amlogic USB Burning backend (always, small) ---------------------------
+$amlSrc = Join-Path $root 'data\thirdparty\amlogic'
+if (Test-Path $amlSrc) {
+    $amlDst = Join-Path $appDir 'data\thirdparty\amlogic'
+    New-Item -ItemType Directory -Force -Path $amlDst | Out-Null
+    Copy-Item -Recurse -Force (Join-Path $amlSrc '*') $amlDst
+}
+
 # ---- docs (always) ----------------------------------------------------------
 $docsDir = Join-Path $appDir 'docs'
 New-Item -ItemType Directory -Force -Path $docsDir | Out-Null
@@ -68,6 +76,11 @@ miniz (MIT) - https://github.com/richgel999/miniz
 Bundled official vendor tools (optional backend, user-supplied):
   MiFlash (Xiaomi), SP Flash Tool (MediaTek), Unisoc Research Download (Unisoc)
   plus their bundled drivers. Copyright belongs to the respective vendors.
+Amlogic USB Burning backend:
+  update.exe / AmlLibusb / AmlUsbScanX3 / UsbRomDrv from
+  https://github.com/osmc/aml-flash-tool (public Amlogic flash tool).
+libusb-win32 (LGPL) - https://github.com/mcuee/libusb-win32
+Zadig / libwdi (LGPL) - https://github.com/pbatard/libwdi
 GeekFlashPacket resource packages are provided by the user.
 '@
 Set-Content -Path (Join-Path $appDir 'THIRD-PARTY-NOTICES.txt') -Value $licenses -Encoding UTF8
@@ -115,12 +128,19 @@ New-Zip $appDir (Join-Path $distRoot "XMF-Flash-Tool-v$version-lite.zip")
 if ($Full -or -not $SkipZip) {
     # ---- full package: include all runtime data ----------------------------
     $fullDir = Join-Path $distRoot 'XMF-Flash-Tool-full'
-    if (Test-Path $fullDir) { Remove-Item -Recurse -Force $fullDir }
-    Copy-Item -Recurse $appDir $fullDir
+    if (Test-Path $fullDir) {
+        # Vendor tools can hold DLL handles; never fail packaging on a locked
+        # file. Sync app files while preserving the existing data tree.
+        & robocopy $appDir $fullDir /E /XD data /NFL /NDL /NJH /NJS /NP | Out-Null
+    } else {
+        Copy-Item -Recurse $appDir $fullDir
+    }
     $dataSrc = Join-Path $root 'data'
     if (Test-Path $dataSrc) {
         Write-Host 'Copying data (official tools + drivers + packs + platform-tools)...' -ForegroundColor Yellow
-        Copy-Item -Recurse -Force $dataSrc (Join-Path $fullDir 'data')
+        $dataDst = Join-Path $fullDir 'data'
+        New-Item -ItemType Directory -Force -Path $dataDst | Out-Null
+        & robocopy $dataSrc $dataDst /E /NFL /NDL /NJH /NJS /NP | Out-Null
     }
     Remove-PrivateArtifacts $fullDir
     New-Zip $fullDir (Join-Path $distRoot "XMF-Flash-Tool-v$version-full.zip")

@@ -88,7 +88,7 @@ Item {
             Text {
                 text: "设备"
                 color: Theme.textMuted
-                font.pixelSize: 11
+                font.pixelSize: Theme.fs(11)
                 anchors.verticalCenter: parent.verticalCenter
             }
             ComboBox {
@@ -101,7 +101,7 @@ Item {
                 currentIndex: page.serial.length > 0 ? -1 : 0
                 onActivated: if (index >= 0 && index < model.length)
                                  page.serial = String(model[index].serial || "")
-                font.pixelSize: 11
+                font.pixelSize: Theme.fs(11)
                 background: Rectangle {
                     radius: Theme.r10
                     color: Theme.panel
@@ -115,7 +115,7 @@ Item {
                           ? String(deviceCombo.model[deviceCombo.currentIndex].serial || "—")
                           : (page.serial.length > 0 ? page.serial : "自动选择")
                     color: Theme.text
-                    font.pixelSize: 11
+                    font.pixelSize: Theme.fs(11)
                     verticalAlignment: Text.AlignVCenter
                     elide: Text.ElideRight
                 }
@@ -124,7 +124,7 @@ Item {
             Text {
                 text: page.mode === 0 ? "命令（shell 后的部分）" : "参数（fastboot 后的部分）"
                 color: Theme.textMuted
-                font.pixelSize: 10
+                font.pixelSize: Theme.fs(10)
                 anchors.verticalCenter: parent.verticalCenter
             }
             Rectangle {
@@ -143,7 +143,7 @@ Item {
                     anchors.rightMargin: 6
                     color: Theme.text
                     font.family: "Consolas"
-                    font.pixelSize: 11
+                    font.pixelSize: Theme.fs(11)
                     selectByMouse: true
                     background: null
                     placeholderText: page.mode === 0 ? "getprop ro.product.model"
@@ -203,7 +203,7 @@ Item {
                     selectByMouse: true
                     color: Theme.text
                     font.family: "Consolas"
-                    font.pixelSize: 11
+                    font.pixelSize: Theme.fs(11)
                     background: null
                     text: "# XMF 命令控制台\n# ADB / Fastboot 命令会直接发送到当前设备\n\n"
                 }

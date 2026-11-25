@@ -39,7 +39,7 @@ Item {
                 width: parent.width
                 text: root.title
                 color: Theme.text
-                font.pixelSize: 22
+                font.pixelSize: Theme.fs(22)
                 font.weight: Font.Bold
                 elide: Text.ElideRight
             }
@@ -48,7 +48,7 @@ Item {
                 visible: root.subtitle !== ""
                 text: root.subtitle
                 color: Theme.textMuted
-                font.pixelSize: 12
+                font.pixelSize: Theme.fs(12)
                 elide: Text.ElideRight
             }
         }

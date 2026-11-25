@@ -105,7 +105,7 @@ GlassSurface {
                 Layout.alignment: Qt.AlignVCenter
                 text: "运行日志"
                 color: Theme.text
-                font.pixelSize: 12
+                font.pixelSize: Theme.fs(12)
                 font.weight: Font.DemiBold
             }
 
@@ -113,7 +113,7 @@ GlassSurface {
                 Layout.alignment: Qt.AlignVCenter
                 text: lineModel.count + " 行"
                 color: Theme.textMuted
-                font.pixelSize: 10
+                font.pixelSize: Theme.fs(10)
             }
 
             Item { Layout.fillWidth: true }
@@ -134,7 +134,7 @@ GlassSurface {
                     anchors.centerIn: parent
                     text: "自动滚动"
                     color: root.follow ? root.accentColor : Theme.textMuted
-                    font.pixelSize: 9
+                    font.pixelSize: Theme.fs(9)
                 }
 
                 MouseArea {
@@ -243,7 +243,7 @@ GlassSurface {
                         width: 54
                         text: model.time
                         color: Theme.textMuted
-                        font.pixelSize: 10
+                        font.pixelSize: Theme.fs(10)
                         font.family: "Consolas"
                         anchors.verticalCenter: parent.verticalCenter
                     }
@@ -258,7 +258,7 @@ GlassSurface {
                         width: parent.width - 78
                         text: model.message
                         color: model.level >= 2 ? root.colorOf(model.level) : Theme.textSub
-                        font.pixelSize: 10
+                        font.pixelSize: Theme.fs(10)
                         font.family: "Consolas"
                         elide: Text.ElideRight
                         anchors.verticalCenter: parent.verticalCenter

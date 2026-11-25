@@ -95,8 +95,8 @@ Item {
                         Row {
                             anchors.fill: parent
                             anchors.leftMargin: 4
-                            Text { text: modelData.name; color: Theme.text; font.pixelSize: 11; width: parent.width - 66; elide: Text.ElideRight }
-                            Text { text: modelData.modelCount + " 机型"; color: Theme.textMuted; font.pixelSize: 10 }
+                            Text { text: modelData.name; color: Theme.text; font.pixelSize: Theme.fs(11); width: parent.width - 66; elide: Text.ElideRight }
+                            Text { text: modelData.modelCount + " 机型"; color: Theme.textMuted; font.pixelSize: Theme.fs(10) }
                         }
                         MouseArea {
                             id: bMouse
@@ -122,9 +122,9 @@ Item {
                     Row {
                         width: parent.width
                         height: 20
-                        Text { width: 140; text: "代号"; color: Theme.textMuted; font.pixelSize: 10 }
-                        Text { width: 160; text: "系列"; color: Theme.textMuted; font.pixelSize: 10 }
-                        Text { text: "机型名称"; color: Theme.textMuted; font.pixelSize: 10 }
+                        Text { width: 140; text: "代号"; color: Theme.textMuted; font.pixelSize: Theme.fs(10) }
+                        Text { width: 160; text: "系列"; color: Theme.textMuted; font.pixelSize: Theme.fs(10) }
+                        Text { text: "机型名称"; color: Theme.textMuted; font.pixelSize: Theme.fs(10) }
                     }
                     Rectangle { width: parent.width; height: 1; color: Theme.divider }
                     ListView {
@@ -141,9 +141,9 @@ Item {
                             Row {
                                 anchors.fill: parent
                                 anchors.leftMargin: 2
-                                Text { width: 140; text: modelData.codename; color: Theme.textSub; font.pixelSize: 11; elide: Text.ElideRight }
-                                Text { width: 160; text: modelData.series; color: Theme.textSub; font.pixelSize: 11; elide: Text.ElideRight }
-                                Text { text: modelData.name; color: Theme.text; font.pixelSize: 11; elide: Text.ElideRight }
+                                Text { width: 140; text: modelData.codename; color: Theme.textSub; font.pixelSize: Theme.fs(11); elide: Text.ElideRight }
+                                Text { width: 160; text: modelData.series; color: Theme.textSub; font.pixelSize: Theme.fs(11); elide: Text.ElideRight }
+                                Text { text: modelData.name; color: Theme.text; font.pixelSize: Theme.fs(11); elide: Text.ElideRight }
                             }
                             MouseArea {
                                 id: mMouse
@@ -169,7 +169,7 @@ Item {
                         Text {
                             text: "官方固件 / 下载入口"
                             color: Theme.textMuted
-                            font.pixelSize: 10
+                            font.pixelSize: Theme.fs(10)
                         }
                         Flow {
                             width: parent.width
@@ -189,7 +189,7 @@ Item {
                                 visible: (page.brandInfo.official || []).length === 0
                                 text: (page.brandInfo.searchHint || "该品牌暂无内置在线入口，可使用上方「在线检索」工具。")
                                 color: Theme.textMuted
-                                font.pixelSize: 10
+                                font.pixelSize: Theme.fs(10)
                                 wrapMode: Text.WordWrap
                                 width: parent.width
                             }
@@ -197,7 +197,7 @@ Item {
                         Text {
                             text: (page.brandInfo.notes || []).join("  ·  ")
                             color: Theme.textMuted
-                            font.pixelSize: 10
+                            font.pixelSize: Theme.fs(10)
                             wrapMode: Text.WordWrap
                             width: parent.width
                             maximumLineCount: 2

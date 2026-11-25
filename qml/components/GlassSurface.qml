@@ -69,7 +69,7 @@ Rectangle {
             width: Math.min(parent.width * 0.42, implicitWidth)
             text: root.hint
             color: root.darkHeader ? Theme.sectionMuted : Theme.textMuted
-            font.pixelSize: 10
+            font.pixelSize: Theme.fs(10)
             elide: Text.ElideRight
             horizontalAlignment: Text.AlignRight
             visible: root.hint !== ""
@@ -84,7 +84,7 @@ Rectangle {
                             - (hintText.visible ? hintText.width + 10 : 0))
             text: root.title
             color: root.darkHeader ? Theme.sectionText : Theme.text
-            font.pixelSize: 12
+            font.pixelSize: Theme.fs(12)
             font.weight: Font.DemiBold
             elide: Text.ElideRight
         }

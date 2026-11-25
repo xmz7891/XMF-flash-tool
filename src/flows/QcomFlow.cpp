@@ -5,6 +5,7 @@
 #include "qcom/Elf.h"
 
 #include <stdexcept>
+#include <QRegularExpression>
 
 namespace gf::flows {
 
@@ -53,21 +54,59 @@ void QcomSession::open(const QByteArray& programmer, const QcomOptions& options)
     }
     m_reporter.info(qcom::describeElf(elf));
 
-    m_reporter.progress(5, QStringLiteral("Sahara 握手…"));
-    m_sahara.handshake();
-    m_reporter.progress(15, QStringLiteral("上传 programmer…"));
-    const auto upload = m_sahara.upload(programmer, 15000, 15, 55);
-    if (!upload.success) {
-        throw std::runtime_error(
-            QStringLiteral("Sahara 上传 programmer 失败：%1").arg(upload.error).toStdString());
-    }
-
     qcom::firehose::StorageConfig config;
     config.memoryName = m_options.memoryName;
     config.maxPayloadBytes = m_options.maxPayloadBytes;
     config.verbose = m_options.verbose;
+
+    auto configureFirehose = [&]() -> bool {
+        try {
+            const auto response = m_firehose.configure(config);
+            return response.ok();
+        } catch (...) {
+            return false;
+        }
+    };
+
+    m_reporter.progress(5, QStringLiteral("Sahara 握手…"));
+    try {
+        m_sahara.handshake();
+        m_reporter.progress(15, QStringLiteral("上传 programmer…"));
+        const auto upload = m_sahara.upload(programmer, 15000, 15, 55);
+        if (!upload.success) {
+            throw std::runtime_error(
+                QStringLiteral("Sahara 上传 programmer 失败：%1").arg(upload.error).toStdString());
+        }
+    } catch (const std::exception& error) {
+        // The device may already be running a Firehose programmer (for example
+        // left there by QFIL/MiFlash or by a previous interrupted session). In
+        // that mode it has no Sahara HELLO and answers only Firehose XML.
+        m_reporter.warn(QStringLiteral("Sahara 未响应（%1），尝试直接连接已有 Firehose…")
+                            .arg(QString::fromUtf8(error.what())));
+        if (!configureFirehose()) {
+            throw std::runtime_error(
+                QStringLiteral("Sahara 握手失败，且设备不在 Firehose 模式：%1")
+                    .arg(QString::fromUtf8(error.what())).toStdString());
+        }
+        m_opened = true;
+        m_reporter.info(QStringLiteral("检测到设备已在 Firehose 模式，跳过 Sahara 上传"));
+        m_reporter.progress(80, QStringLiteral("Firehose 就绪"));
+        return;
+    }
+
     m_reporter.progress(75, QStringLiteral("Firehose 配置存储类型 %1…").arg(config.memoryName));
-    ensureOk(m_firehose.configure(config), QStringLiteral("Firehose configure"));
+    const auto configureResponse = m_firehose.configure(config);
+    ensureOk(configureResponse, QStringLiteral("Firehose configure"));
+    // The programmer reports the real storage geometry. eMMC is 512-byte
+    // sectors even if the caller guessed UFS; using 4096 here silently reads
+    // zeroes from every partition.
+    QRegularExpression sectorRe(QStringLiteral("SectorSize=.?([0-9]+)"));
+    auto sectorMatch = sectorRe.match(configureResponse.raw);
+    if (sectorMatch.hasMatch()) {
+        const quint32 detected = sectorMatch.captured(1).toUInt();
+        if (detected == 512 || detected == 4096)
+            m_sectorSize = detected;
+    }
     m_opened = true;
     m_reporter.progress(80, QStringLiteral("Firehose 就绪"));
 }
@@ -80,23 +119,44 @@ const PartitionTable& QcomSession::partitionTable()
         return m_table;
 
     m_reporter.status(QStringLiteral("读取 GPT 分区表…"));
-    PartitionTable table = PartitionTable::fromGptData(readWithSectorSize(0, kGptProbeBytes, 4096),
-                                                       QStringLiteral("qcom"),
-                                                       m_options.memoryName);
-    if (!table.valid) {
-        table = PartitionTable::fromGptData(readWithSectorSize(0, kGptProbeBytes, 512),
+    PartitionTable table;
+    PartitionTable table512;
+    quint32 storageSector = 0;
+    // Probe both geometries. Some eMMC programmers accept a 4096 read but
+    // return the cached/zero view, while 512 returns the real GPT; choose the
+    // table with more partitions (and therefore the real geometry).
+    try {
+        table = PartitionTable::fromGptData(readWithSectorSize(0, kGptProbeBytes, 4096),
                                             QStringLiteral("qcom"), m_options.memoryName);
+        if (table.valid)
+            storageSector = 4096;
+    } catch (const std::exception&) {
+        table = PartitionTable();
+    }
+    try {
+        table512 = PartitionTable::fromGptData(readWithSectorSize(0, kGptProbeBytes, 512),
+                                               QStringLiteral("qcom"), m_options.memoryName);
+    } catch (const std::exception&) {
+        table512 = PartitionTable();
+    }
+    if (table512.valid && (!table.valid || table512.partitions.size() > table.partitions.size())) {
+        table = table512;
+        storageSector = 512;
     }
     if (!table.valid) {
         throw std::runtime_error(
             QStringLiteral("无法读取设备 GPT：%1").arg(table.error).toStdString());
     }
-    m_sectorSize = table.sectorSize;
+    // Keep the *storage* sector size (UFS 4096 / eMMC 512), detected by which
+    // GPT probe succeeded. GPT logical sectors are only LBA offsets.
+    if (storageSector != 0)
+        m_sectorSize = storageSector;
     m_table = table;
     m_tableLoaded = true;
-    m_reporter.info(QStringLiteral("GPT 分区表：%1 个分区，扇区大小 %2")
+    m_reporter.info(QStringLiteral("GPT 分区表：%1 个分区，GPT 逻辑扇区 %2，存储扇区 %3")
                         .arg(table.partitions.size())
-                        .arg(table.sectorSize));
+                        .arg(table.sectorSize)
+                        .arg(m_sectorSize));
     return m_table;
 }
 
@@ -148,8 +208,13 @@ void QcomSession::writeRaw(quint64 offset, const QByteArray& data)
         buffer[qsizetype(lead) + i] = data[i];
 
     m_reporter.status(QStringLiteral("写入 0x%1，%2 字节").arg(offset, 0, 16).arg(data.size()));
+    // The target advertises MaxPayloadSizeToTargetInBytes; sending the whole
+    // partition in one bulk transfer corrupts data on programmers that cap the
+    // payload (seen with this 660 loader). Use one storage sector per program
+    // command; correctness first.
     const auto response = m_firehose.programSectors(m_options.memoryName, 0, startSector, buffer,
-                                                    int(ss), QStringLiteral("flash.bin"));
+                                                    int(ss), QStringLiteral("flash.bin"),
+                                                    4096, true);
     ensureOk(response, QStringLiteral("Firehose 写入"));
 }
 

@@ -30,7 +30,7 @@ Item {
                 Text {
                     text: modelData.title
                     color: Theme.text
-                    font.pixelSize: 11
+                    font.pixelSize: Theme.fs(11)
                     elide: Text.ElideRight
                     width: parent.width - 46
                 }
@@ -38,7 +38,7 @@ Item {
                     anchors.right: parent.right
                     text: modelData.progress >= 0 ? modelData.progress + "%" : "…"
                     color: Theme.textMuted
-                    font.pixelSize: 10
+                    font.pixelSize: Theme.fs(10)
                 }
                 Rectangle {
                     anchors.left: parent.left
@@ -58,7 +58,7 @@ Item {
                     anchors.bottomMargin: 4
                     text: modelData.status || ""
                     color: Theme.textMuted
-                    font.pixelSize: 9
+                    font.pixelSize: Theme.fs(9)
                     elide: Text.ElideRight
                     width: parent.width - 60
                 }

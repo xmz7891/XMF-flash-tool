@@ -467,6 +467,14 @@ QList<PortInfo> enumerateFlashPorts()
         if (port.description.isEmpty())
             port.description = QStringLiteral("USB 刷机设备");
         port.portName = port.description;
+        // Qualcomm 9008 can be bound to the Qualcomm USB serial driver and
+        // expose a COM port (e.g. "Qualcomm HS-USB QDLoader 9008 (COM10)").
+        // Use a serial transport for that binding instead of WinUSB.
+        static const QRegularExpression comPattern(QStringLiteral("\\bCOM[0-9]+\\b"),
+                                                    QRegularExpression::CaseInsensitiveOption);
+        const auto comMatch = comPattern.match(port.description);
+        if (comMatch.hasMatch())
+            port.devicePath = comMatch.captured(0).toUpper();
 
         wchar_t instanceId[512] = {};
         DWORD instanceSize = 0;

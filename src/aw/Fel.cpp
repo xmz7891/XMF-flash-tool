@@ -182,6 +182,12 @@ QByteArray Client::readData(quint32 length, int timeoutMs, bool resyncVersion)
                 m_rx = packet.mid(kAckSize);
             continue;
         }
+        if (resyncVersion && out.isEmpty() && !packet.startsWith(QByteArrayLiteral("AWUSBFEX"))) {
+            throw std::runtime_error(
+                QStringLiteral("FEL 版本应答已降级（收到 %1 字节非 AWUSBFEX 数据）；"
+                               "请断开设备 DC 电源后重新进入 FEL")
+                    .arg(packet.size()).toStdString());
+        }
         out.append(packet);
         if (out.size() > int(length)) {
             m_rx = out.mid(int(length)) + m_rx;
@@ -243,8 +249,12 @@ VersionInfo Client::hello(int timeoutMs)
         // the BROM refuses the next OUT transfer.
         usb::drainInput(m_transport, 100);
         sendFelRequest(kHello, 0, 0, timeoutMs);
-        const QByteArray payload = readUsb(kVersionSize, timeoutMs);
-        readFelStatus(timeoutMs);
+        // FEL_VERSION returns the 32-byte AWUSBFEX payload directly after the
+        // request ACK; there is no separate AW_USB_READ header and no trailing
+        // 8-byte status packet on this BROM. Sending another read header here
+        // makes A133 return a degraded 16-byte zero payload.
+        const QByteArray payload = readData(kVersionSize, timeoutMs, true);
+        readAck(timeoutMs);
         const VersionInfo info = parseVersion(payload);
         if (!info.valid)
             throw std::runtime_error(QStringLiteral("FEL 握手失败：%1").arg(info.error).toStdString());

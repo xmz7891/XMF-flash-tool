@@ -20,7 +20,7 @@ struct PortInfo {
     int address = 0;
 };
 
-enum class ChipPlatform { Unknown, Qualcomm, MediaTek, Spreadtrum, Rockchip, Allwinner };
+enum class ChipPlatform { Unknown, Qualcomm, MediaTek, Spreadtrum, Rockchip, Allwinner, Amlogic };
 
 /// Abstract bulk/control transport. All protocol code depends on this only.
 class IUsbTransport {

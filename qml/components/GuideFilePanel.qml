@@ -117,14 +117,14 @@ Item {
                 Text {
                     text: "当前引导文件"
                     color: Theme.textMuted
-                    font.pixelSize: 10
+                    font.pixelSize: Theme.fs(10)
                     anchors.verticalCenter: parent.verticalCenter
                 }
                 Text {
                     width: parent.width - 300
                     text: App.guideFile.length > 0 ? App.guideFile : "未选择（可本地选择，或从下方引导包提取）"
                     color: App.guideFile.length > 0 ? Theme.text : Theme.textMuted
-                    font.pixelSize: 10
+                    font.pixelSize: Theme.fs(10)
                     font.family: "Consolas"
                     elide: Text.ElideMiddle
                     anchors.verticalCenter: parent.verticalCenter
@@ -165,7 +165,7 @@ Item {
                 Text {
                     text: "引导包"
                     color: Theme.textMuted
-                    font.pixelSize: 10
+                    font.pixelSize: Theme.fs(10)
                     anchors.verticalCenter: parent.verticalCenter
                 }
                 ComboBox {
@@ -177,14 +177,14 @@ Item {
                     textRole: "name"
                     currentIndex: panel.packetIndex
                     onActivated: { panel.packetIndex = index; panel.modelIndex = 0 }
-                    font.pixelSize: 10
+                    font.pixelSize: Theme.fs(10)
                     background: Rectangle { radius: Theme.r8; color: Theme.panelAlt; border.width: 1; border.color: Theme.border }
                     contentItem: Text {
                         leftPadding: 6
                         text: packetCombo.count > 0 && packetCombo.currentIndex >= 0
                               ? String(packetCombo.model[packetCombo.currentIndex].name || "") : "—"
                         color: Theme.text
-                        font.pixelSize: 10
+                        font.pixelSize: Theme.fs(10)
                         verticalAlignment: Text.AlignVCenter
                         elide: Text.ElideRight
                     }
@@ -192,7 +192,7 @@ Item {
                 Text {
                     text: "机型"
                     color: Theme.textMuted
-                    font.pixelSize: 10
+                    font.pixelSize: Theme.fs(10)
                     anchors.verticalCenter: parent.verticalCenter
                 }
                 ComboBox {
@@ -204,14 +204,14 @@ Item {
                     textRole: "name"
                     currentIndex: panel.modelIndex
                     onActivated: panel.modelIndex = index
-                    font.pixelSize: 10
+                    font.pixelSize: Theme.fs(10)
                     background: Rectangle { radius: Theme.r8; color: Theme.panelAlt; border.width: 1; border.color: Theme.border }
                     contentItem: Text {
                         leftPadding: 6
                         text: modelCombo.count > 0 && modelCombo.currentIndex >= 0
                               ? String(modelCombo.model[modelCombo.currentIndex].name || "") : "—"
                         color: Theme.text
-                        font.pixelSize: 10
+                        font.pixelSize: Theme.fs(10)
                         verticalAlignment: Text.AlignVCenter
                         elide: Text.ElideRight
                     }
@@ -219,7 +219,7 @@ Item {
                 Text {
                     text: "文件"
                     color: Theme.textMuted
-                    font.pixelSize: 10
+                    font.pixelSize: Theme.fs(10)
                     anchors.verticalCenter: parent.verticalCenter
                 }
                 ComboBox {
@@ -230,14 +230,14 @@ Item {
                     model: panel.attributes
                     currentIndex: panel.attributeIndex
                     onActivated: panel.attributeIndex = index
-                    font.pixelSize: 10
+                    font.pixelSize: Theme.fs(10)
                     background: Rectangle { radius: Theme.r8; color: Theme.panelAlt; border.width: 1; border.color: Theme.border }
                     contentItem: Text {
                         leftPadding: 6
                         text: attrCombo.count > 0 && attrCombo.currentIndex >= 0
                               ? String(attrCombo.model[attrCombo.currentIndex]) : "—"
                         color: Theme.text
-                        font.pixelSize: 10
+                        font.pixelSize: Theme.fs(10)
                         verticalAlignment: Text.AlignVCenter
                     }
                 }
