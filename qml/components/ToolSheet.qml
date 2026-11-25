@@ -76,7 +76,7 @@ Item {
 
     Rectangle {
         width: Math.min(parent.width - 80, 520)
-        height: Math.min(parent.height - 60, formArea.height + 132)
+        height: Math.min(parent.height - 60, formArea.height + 150)
         anchors.centerIn: parent
         visible: sheet.visible
         radius: Theme.r14
@@ -94,24 +94,28 @@ Item {
             anchors.top: parent.top
             anchors.left: parent.left
             anchors.right: parent.right
-            height: 34
+            height: 48
             color: Theme.panelAlt
             radius: Theme.r14
 
             Text {
+                id: sheetTitle
                 anchors.left: parent.left
                 anchors.leftMargin: 12
-                anchors.verticalCenter: parent.verticalCenter
+                anchors.top: parent.top
+                anchors.topMargin: 7
+                width: parent.width - 40
                 text: sheet.toolData.name || "运行工具"
                 color: Theme.text
                 font.pixelSize: Theme.fs(12)
                 font.weight: Font.DemiBold
+                elide: Text.ElideRight
             }
             Text {
                 anchors.left: parent.left
                 anchors.leftMargin: 12
-                anchors.top: parent.top
-                anchors.topMargin: 17
+                anchors.top: sheetTitle.bottom
+                anchors.topMargin: 2
                 width: parent.width - 40
                 text: sheet.toolData.desc || ""
                 color: Theme.textMuted

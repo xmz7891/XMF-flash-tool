@@ -165,6 +165,13 @@ Item {
         rows = copy
     }
 
+    function taskSpeedText() {
+        if (!page.activeTask)
+            return "0.0 MB/s"
+        const m = String(page.activeTask.status || "").match(/([0-9.]+)\s*MB\/s/)
+        return m ? (m[1] + " MB/s") : "—"
+    }
+
     function serial() {
         if (App.fastbootDevices.length > 0)
             return String(App.fastbootDevices[0].serial || "")
@@ -498,7 +505,7 @@ Item {
                 height: parent.height
                 radius: 0
                 title: "执行日志"
-                hint: logList.count + " 条"
+                hint: (App.deviceDetecting ? "正在检测设备" : (App.deviceMode.label || "未检测到设备")) + " · " + logList.count + " 条"
 
                 Column {
                     anchors.fill: parent
@@ -709,7 +716,7 @@ Item {
                 elide: Text.ElideRight
             }
             Text {
-                text: "0.0 MB/s"
+                text: page.taskSpeedText()
                 color: Theme.textMuted
                 font.pixelSize: Theme.fs(10)
                 anchors.verticalCenter: parent.verticalCenter

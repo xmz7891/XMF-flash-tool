@@ -20,7 +20,7 @@
 namespace gf::flows {
 
 struct QcomOptions {
-    QString memoryName = QStringLiteral("emmc"); // emmc / ufs / spinor / nvme / sdcard
+    QString memoryName; // empty = auto-detect (emmc / ufs / spinor / nvme)
     int maxPayloadBytes = 1024 * 1024;
     quint32 sectorSize = 4096; // initial guess; GPT detection corrects it
     bool verbose = false;

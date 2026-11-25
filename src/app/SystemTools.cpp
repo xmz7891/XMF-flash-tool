@@ -16,6 +16,7 @@
 #include <QDir>
 #include <QDirIterator>
 #include <QFileInfo>
+#include <QHash>
 #include <QGuiApplication>
 #include <QScreen>
 #include <QSysInfo>
@@ -227,6 +228,36 @@ void selfTestTool(TaskContext& ctx, const QVariantMap& options)
         check(QStringLiteral("%1 可执行").arg(binary.label),
               result.started && result.exitCode == 0,
               QString::fromLocal8Bit(result.stdoutData + result.stderrData).left(40).trimmed());
+    }
+    // Offline toolchain manifest: every bundled vendor tool is hashed at
+    // package time; verify the security-relevant executables here.
+    const QString manifestPath = dataDir + QStringLiteral("/toolchain.sha256");
+    QHash<QString, QString> manifestHashes;
+    QFile manifest(manifestPath);
+    if (manifest.open(QIODevice::ReadOnly)) {
+        for (const QByteArray& line : manifest.readAll().split('\n')) {
+            const QList<QByteArray> parts = line.trimmed().split(' ');
+            if (parts.size() >= 2)
+                manifestHashes.insert(QString::fromUtf8(parts.last()).replace('\\', '/'),
+                                      QString::fromLatin1(parts.first()));
+        }
+    }
+    check(QStringLiteral("离线工具链摘要"), !manifestHashes.isEmpty(),
+          manifestPath, false);
+    for (const auto& rel : {QStringLiteral("thirdparty/qedl/qedl.exe"),
+                            QStringLiteral("thirdparty/amlogic/update.exe"),
+                            QStringLiteral("thirdparty/oss/scrcpy/scrcpy.exe")}) {
+        const QString path = dataDir + QLatin1Char('/') + rel;
+        if (!QFileInfo::exists(path))
+            continue;
+        QFile f(path);
+        if (!f.open(QIODevice::ReadOnly))
+            continue;
+        const QString actual = QString::fromLatin1(
+            QCryptographicHash::hash(f.readAll(), QCryptographicHash::Sha256).toHex());
+        const QString expected = manifestHashes.value(rel);
+        check(QStringLiteral("摘要 %1").arg(QFileInfo(path).fileName()),
+              !expected.isEmpty() && actual == expected, actual.left(16), false);
     }
     ctx.setProgress(50);
 

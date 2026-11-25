@@ -32,7 +32,7 @@ Item {
     }
 
     function openTool(toolId, extra) {
-        const preset = { programmer: App.guideFile, memory: "emmc" }
+        const preset = { programmer: App.guideFile }
         if (extra) for (const k in extra) preset[k] = extra[k]
         toolSheet.open(App.toolInfo(toolId), preset)
     }
@@ -52,7 +52,7 @@ Item {
         if (App.guideFile.length === 0) { App.notify("warning", "请先选择 Loader"); loaderDialog.open(); return }
         reading = true
         frame.statusText = "正在读取 GPT…"; frame.statusKind = "busy"
-        const result = App.workspace.loadQcomPartitions(App.guideFile, "emmc")
+        const result = App.workspace.loadQcomPartitions(App.guideFile, "")
         reading = false
         if (!result || !result.ok) {
             logBox.append("error", result && result.error ? result.error : "读取 GPT 失败")

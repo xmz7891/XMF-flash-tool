@@ -46,6 +46,10 @@ class AppController : public QObject {
     Q_PROPERTY(bool systemDark READ systemDark NOTIFY darkThemeChanged)
     Q_PROPERTY(bool disclaimerAccepted READ disclaimerAccepted NOTIFY disclaimerAcceptedChanged)
     Q_PROPERTY(QVariantMap deviceMode READ deviceMode NOTIFY deviceModeChanged)
+    Q_PROPERTY(bool deviceDetecting READ deviceDetecting NOTIFY deviceDetectingChanged)
+    Q_PROPERTY(QString usbSpeedText READ usbSpeedText NOTIFY usbSpeedTextChanged)
+    Q_PROPERTY(bool toolchainReady READ toolchainReady NOTIFY toolchainReadyChanged)
+    Q_PROPERTY(QString toolchainError READ toolchainError NOTIFY toolchainReadyChanged)
     Q_PROPERTY(QString guideFile READ guideFile WRITE setGuideFile NOTIFY guideFileChanged)
     Q_PROPERTY(QString freeNoticeText READ freeNoticeText CONSTANT)
     Q_PROPERTY(bool updateAvailable READ updateAvailable NOTIFY updateStateChanged)
@@ -87,6 +91,10 @@ public:
     /// Detected current device mode: fastboot / sideload / edl9008 / mtk-brom /
     /// sprd-fdl / rk-maskrom / aw-fel / adb / none. Includes label + platform.
     QVariantMap deviceMode() const;
+    bool deviceDetecting() const;
+    QString usbSpeedText() const;
+    bool toolchainReady() const;
+    QString toolchainError() const;
     /// Currently selected deep-flash guide/loader file (local or from a packet).
     QString guideFile() const;
     void setGuideFile(const QString& path);
@@ -166,6 +174,9 @@ signals:
     void darkThemeChanged();
     void disclaimerAcceptedChanged();
     void deviceModeChanged();
+    void deviceDetectingChanged();
+    void usbSpeedTextChanged();
+    void toolchainReadyChanged();
     void guideFileChanged();
     void updateStateChanged();
     void notifyRequested(const QString& type, const QString& message);
@@ -175,6 +186,10 @@ private:
     Settings m_settings;
     bool m_disclaimerAccepted = false;
     QVariantMap m_deviceMode;
+    bool m_deviceDetecting = true;
+    QString m_usbSpeedText;
+    bool m_toolchainReady = true;
+    QString m_toolchainError;
     QString m_guideFile;
     device::PortsModel m_ports;
     FirmwareWorkspace m_workspace;

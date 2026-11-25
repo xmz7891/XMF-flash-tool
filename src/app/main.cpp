@@ -64,6 +64,9 @@ int main(int argc, char* argv[])
                                     QStringLiteral("ms"), QStringLiteral("1200"));
     QCommandLineOption pageOpt(QStringLiteral("page"), QStringLiteral("Open a page by nav index before running"),
                                QStringLiteral("index"));
+    QCommandLineOption toolSheetOpt(QStringLiteral("tool-sheet"),
+                                    QStringLiteral("Open a tool sheet for UI regression"),
+                                    QStringLiteral("id"));
     QCommandLineOption windowSizeOpt(QStringLiteral("window-size"),
                                      QStringLiteral("Window size WxH for layout regression"),
                                      QStringLiteral("WxH"));
@@ -115,6 +118,7 @@ int main(int argc, char* argv[])
     parser.addOption(shotDelayOpt);
     parser.addOption(pageOpt);
     parser.addOption(windowSizeOpt);
+    parser.addOption(toolSheetOpt);
     parser.addOption(themeOpt);
     parser.addOption(modeOpt);
     parser.addOption(embedOpt);
@@ -348,6 +352,12 @@ int main(int argc, char* argv[])
             native::applyGlass(window, controller.darkTheme());
         });
 
+        if (parser.isSet(toolSheetOpt)) {
+            const QString toolId = parser.value(toolSheetOpt);
+            QTimer::singleShot(350, window, [window, toolId]() {
+                QMetaObject::invokeMethod(window, "openToolSheet", Q_ARG(QVariant, toolId));
+            });
+        }
         if (parser.isSet(windowSizeOpt)) {
             const QStringList parts = parser.value(windowSizeOpt).split(QLatin1Char('x'));
             if (parts.size() == 2) {

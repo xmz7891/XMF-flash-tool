@@ -7,11 +7,13 @@
 
 #include "NativeWindow.h"
 #include "ToolModules.h"
+#include "ToolchainManager.h"
 #include "ToolRegistry.h"
 #include "Util.h"
 #include "device/AdbClient.h"
 #include "device/FastbootClient.h"
 #include "device/DriverManager.h"
+#include "usb/UsbSpeed.h"
 
 #include <QCoreApplication>
 #include <QClipboard>
@@ -26,6 +28,7 @@
 #include <QStyleHints>
 #include <QRunnable>
 #include <QThreadPool>
+#include <QTimer>
 
 #ifdef Q_OS_WIN
 #include <windows.h>
@@ -137,7 +140,21 @@ void AppController::initialize()
                 }
                 batchAdvance();
             });
+    QString toolchainError;
+    if (!ensureToolchain(&toolchainError)) {
+        m_toolchainReady = false;
+        m_toolchainError = toolchainError;
+        emit toolchainReadyChanged();
+        GF_WARN(QStringLiteral("toolchain"), toolchainError);
+    }
     refreshDevices();
+    scanPorts();
+    QTimer::singleShot(1200, this, [this]() {
+        if (m_deviceDetecting) {
+            m_deviceDetecting = false;
+            emit deviceDetectingChanged();
+        }
+    });
     emit toolsChanged();
 }
 
@@ -149,6 +166,21 @@ bool AppController::adbAvailable() const
 void AppController::scanPorts()
 {
     m_ports.refresh();
+    QString speed;
+    for (const QVariant& raw : m_ports.ports()) {
+        const QVariantMap port = raw.toMap();
+        if (port.value(QStringLiteral("vid")).toInt() == 0x05C6
+                || port.value(QStringLiteral("kind")).toString().startsWith(QStringLiteral("qcom"))) {
+            speed = usb::linkSpeedText(quint16(port.value(QStringLiteral("vid")).toInt()),
+                                       quint16(port.value(QStringLiteral("pid")).toInt()));
+            if (!speed.isEmpty())
+                break;
+        }
+    }
+    if (m_usbSpeedText != speed) {
+        m_usbSpeedText = speed;
+        emit usbSpeedTextChanged();
+    }
     refreshDeviceMode();
     emit adbDevicesChanged();
 }
@@ -480,6 +512,26 @@ void AppController::previewDisclaimer()
 QVariantMap AppController::deviceMode() const
 {
     return m_deviceMode;
+}
+
+bool AppController::deviceDetecting() const
+{
+    return m_deviceDetecting;
+}
+
+QString AppController::usbSpeedText() const
+{
+    return m_usbSpeedText;
+}
+
+bool AppController::toolchainReady() const
+{
+    return m_toolchainReady;
+}
+
+QString AppController::toolchainError() const
+{
+    return m_toolchainError;
 }
 
 QString AppController::guideFile() const

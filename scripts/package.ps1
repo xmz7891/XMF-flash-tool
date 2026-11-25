@@ -50,6 +50,14 @@ if (Test-Path $amlSrc) {
     Copy-Item -Recurse -Force (Join-Path $amlSrc '*') $amlDst
 }
 
+# ---- Qualcomm qedl backend (always) ---------------------------------------
+$qedlSrc = Join-Path $root 'data\thirdparty\qedl'
+if (Test-Path $qedlSrc) {
+    $qedlDst = Join-Path $appDir 'data\thirdparty\qedl'
+    New-Item -ItemType Directory -Force -Path $qedlDst | Out-Null
+    Copy-Item -Recurse -Force (Join-Path $qedlSrc '*') $qedlDst
+}
+
 # ---- docs (always) ----------------------------------------------------------
 $docsDir = Join-Path $appDir 'docs'
 New-Item -ItemType Directory -Force -Path $docsDir | Out-Null
@@ -120,6 +128,33 @@ function New-Zip([string]$sourceDir, [string]$zipPath) {
     Write-Host "Package: $zipPath ($sizeMb MB)" -ForegroundColor Green
 }
 
+function New-ToolchainManifest([string]$dir) {
+    $data = Join-Path $dir 'data'
+    if (-not (Test-Path $data)) { return }
+    $zipPath = Join-Path $data 'toolchain.zip'
+    $sources = @()
+    foreach ($sub in @('thirdparty\\qedl', 'thirdparty\\amlogic')) {
+        $p = Join-Path $data $sub
+        if (Test-Path $p) { $sources += (Join-Path $p '*') }
+    }
+    if ($sources.Count -gt 0) {
+        if (Test-Path $zipPath) { Remove-Item -Force $zipPath }
+        try { Compress-Archive -Path $sources -DestinationPath $zipPath -CompressionLevel Optimal -Force } catch { Write-Host "toolchain zip skipped: $($_.Exception.Message)" }
+    }
+    $lines = @()
+    foreach ($sub in @('thirdparty\\qedl', 'thirdparty\\amlogic')) {
+        $root = Join-Path $data $sub
+        if (-not (Test-Path $root)) { continue }
+        Get-ChildItem $root -Recurse -File -ErrorAction SilentlyContinue | ForEach-Object {
+            $rel = $_.FullName.Substring($data.Length).TrimStart('\\')
+            $hash = (Get-FileHash $_.FullName -Algorithm SHA256).Hash.ToLower()
+            $lines += "$hash  $rel"
+        }
+    }
+    Set-Content -Path (Join-Path $data 'toolchain.sha256') -Value ($lines -join "`n") -Encoding ASCII
+}
+New-ToolchainManifest $appDir
+
 Remove-PrivateArtifacts $appDir
 
 # ---- lite package: app + docs only -----------------------------------------
@@ -142,6 +177,7 @@ if ($Full -or -not $SkipZip) {
         New-Item -ItemType Directory -Force -Path $dataDst | Out-Null
         & robocopy $dataSrc $dataDst /E /NFL /NDL /NJH /NJS /NP | Out-Null
     }
+    New-ToolchainManifest $fullDir
     Remove-PrivateArtifacts $fullDir
     New-Zip $fullDir (Join-Path $distRoot "XMF-Flash-Tool-v$version-full.zip")
 }

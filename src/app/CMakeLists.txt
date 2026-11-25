@@ -5,6 +5,7 @@ set(APP_SOURCES
     AppController.cpp NativeWindow.cpp FirmwareWorkspace.cpp FirmwareBrowser.cpp OfficialTools.cpp EmbeddedApp.cpp
     FreeNotice.cpp FreeNoticePrivate.cpp
     SystemTools.cpp
+    ToolchainManager.cpp ToolchainManager.h
 )
 
 qt_add_executable(XMF ${APP_SOURCES})

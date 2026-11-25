@@ -6,6 +6,7 @@
 
 #include <stdexcept>
 #include <QRegularExpression>
+#include <QElapsedTimer>
 
 namespace gf::flows {
 
@@ -55,17 +56,42 @@ void QcomSession::open(const QByteArray& programmer, const QcomOptions& options)
     m_reporter.info(qcom::describeElf(elf));
 
     qcom::firehose::StorageConfig config;
-    config.memoryName = m_options.memoryName;
+    config.memoryName = m_options.memoryName.isEmpty() ? QStringLiteral("emmc")
+                                                       : m_options.memoryName;
     config.maxPayloadBytes = m_options.maxPayloadBytes;
     config.verbose = m_options.verbose;
 
-    auto configureFirehose = [&]() -> bool {
+    const QStringList memories = m_options.memoryName.isEmpty()
+        ? QStringList{QStringLiteral("emmc"), QStringLiteral("ufs"),
+                      QStringLiteral("spinor"), QStringLiteral("nvme")}
+        : QStringList{m_options.memoryName};
+    auto configureOne = [&](const QString& memory, qcom::firehose::Response* out) -> bool {
+        qcom::firehose::StorageConfig cfg = config;
+        cfg.memoryName = memory;
         try {
-            const auto response = m_firehose.configure(config);
-            return response.ok();
+            const auto response = m_firehose.configure(cfg);
+            if (out) *out = response;
+            if (!response.ok())
+                return false;
+            QRegularExpression sectorRe(QStringLiteral("SectorSize=.?([0-9]+)"));
+            const auto sectorMatch = sectorRe.match(response.raw);
+            if (sectorMatch.hasMatch()) {
+                const quint32 detected = sectorMatch.captured(1).toUInt();
+                if (detected == 512 || detected == 4096)
+                    m_sectorSize = detected;
+            }
+            config = cfg;
+            m_options.memoryName = memory;
+            return true;
         } catch (...) {
             return false;
         }
+    };
+    auto configureAuto = [&]() -> bool {
+        for (const QString& memory : memories)
+            if (configureOne(memory, nullptr))
+                return true;
+        return false;
     };
 
     m_reporter.progress(5, QStringLiteral("Sahara 握手…"));
@@ -83,7 +109,7 @@ void QcomSession::open(const QByteArray& programmer, const QcomOptions& options)
         // that mode it has no Sahara HELLO and answers only Firehose XML.
         m_reporter.warn(QStringLiteral("Sahara 未响应（%1），尝试直接连接已有 Firehose…")
                             .arg(QString::fromUtf8(error.what())));
-        if (!configureFirehose()) {
+        if (!configureAuto()) {
             throw std::runtime_error(
                 QStringLiteral("Sahara 握手失败，且设备不在 Firehose 模式：%1")
                     .arg(QString::fromUtf8(error.what())).toStdString());
@@ -94,19 +120,9 @@ void QcomSession::open(const QByteArray& programmer, const QcomOptions& options)
         return;
     }
 
-    m_reporter.progress(75, QStringLiteral("Firehose 配置存储类型 %1…").arg(config.memoryName));
-    const auto configureResponse = m_firehose.configure(config);
-    ensureOk(configureResponse, QStringLiteral("Firehose configure"));
-    // The programmer reports the real storage geometry. eMMC is 512-byte
-    // sectors even if the caller guessed UFS; using 4096 here silently reads
-    // zeroes from every partition.
-    QRegularExpression sectorRe(QStringLiteral("SectorSize=.?([0-9]+)"));
-    auto sectorMatch = sectorRe.match(configureResponse.raw);
-    if (sectorMatch.hasMatch()) {
-        const quint32 detected = sectorMatch.captured(1).toUInt();
-        if (detected == 512 || detected == 4096)
-            m_sectorSize = detected;
-    }
+    m_reporter.progress(75, QStringLiteral("Firehose 自动检测存储类型…"));
+    if (!configureAuto())
+        throw std::runtime_error("Firehose 无法识别存储类型（已尝试 eMMC/UFS/SPI/NVMe）");
     m_opened = true;
     m_reporter.progress(80, QStringLiteral("Firehose 就绪"));
 }
@@ -118,34 +134,50 @@ const PartitionTable& QcomSession::partitionTable()
     if (m_tableLoaded)
         return m_table;
 
-    m_reporter.status(QStringLiteral("读取 GPT 分区表…"));
+    m_reporter.status(QStringLiteral("自动检测存储类型与 GPT…"));
     PartitionTable table;
-    PartitionTable table512;
     quint32 storageSector = 0;
-    // Probe both geometries. Some eMMC programmers accept a 4096 read but
-    // return the cached/zero view, while 512 returns the real GPT; choose the
-    // table with more partitions (and therefore the real geometry).
-    try {
-        table = PartitionTable::fromGptData(readWithSectorSize(0, kGptProbeBytes, 4096),
-                                            QStringLiteral("qcom"), m_options.memoryName);
-        if (table.valid)
-            storageSector = 4096;
-    } catch (const std::exception&) {
-        table = PartitionTable();
-    }
-    try {
-        table512 = PartitionTable::fromGptData(readWithSectorSize(0, kGptProbeBytes, 512),
-                                               QStringLiteral("qcom"), m_options.memoryName);
-    } catch (const std::exception&) {
-        table512 = PartitionTable();
-    }
-    if (table512.valid && (!table.valid || table512.partitions.size() > table.partitions.size())) {
-        table = table512;
-        storageSector = 512;
+    QString chosenMemory = m_options.memoryName;
+    QStringList memories;
+    if (!chosenMemory.isEmpty())
+        memories << chosenMemory;
+    else
+        memories << QStringLiteral("emmc") << QStringLiteral("ufs")
+                 << QStringLiteral("spinor") << QStringLiteral("nvme");
+    for (const QString& memory : memories) {
+        if (memory != m_options.memoryName) {
+            qcom::firehose::StorageConfig config;
+            config.memoryName = memory;
+            config.maxPayloadBytes = m_options.maxPayloadBytes;
+            const auto cfg = m_firehose.configure(config);
+            if (!cfg.ok())
+                continue;
+        }
+        PartitionTable probe4;
+        PartitionTable probe512;
+        try {
+            probe4 = PartitionTable::fromGptData(readWithSectorSize(0, kGptProbeBytes, 4096),
+                                                 QStringLiteral("qcom"), memory);
+        } catch (const std::exception&) { probe4 = PartitionTable(); }
+        try {
+            probe512 = PartitionTable::fromGptData(readWithSectorSize(0, kGptProbeBytes, 512),
+                                                   QStringLiteral("qcom"), memory);
+        } catch (const std::exception&) { probe512 = PartitionTable(); }
+        if (probe512.valid && (!probe4.valid || probe512.partitions.size() > probe4.partitions.size())) {
+            table = probe512; storageSector = 512;
+        } else if (probe4.valid) {
+            table = probe4; storageSector = 4096;
+        }
+        if (table.valid) {
+            chosenMemory = memory;
+            m_options.memoryName = memory;
+            break;
+        }
     }
     if (!table.valid) {
         throw std::runtime_error(
-            QStringLiteral("无法读取设备 GPT：%1").arg(table.error).toStdString());
+            QStringLiteral("无法读取设备 GPT（已自动尝试 eMMC/UFS/SPI/NVMe）：%1")
+                .arg(table.error).toStdString());
     }
     // Keep the *storage* sector size (UFS 4096 / eMMC 512), detected by which
     // GPT probe succeeded. GPT logical sectors are only LBA offsets.
@@ -341,7 +373,14 @@ QString QcomSession::memoryTypeFromPacket(const QString& packetId, const QString
 QByteArray QcomFirehoseIo::readPartition(const QString& name, const proto::Reporter& reporter)
 {
     reporter.status(QStringLiteral("读取分区 %1").arg(name));
-    return m_session.readPartition(name);
+    QElapsedTimer timer;
+    timer.start();
+    const QByteArray data = m_session.readPartition(name);
+    const double seconds = qMax<qint64>(1, timer.elapsed()) / 1000.0;
+    reporter.status(QStringLiteral("读取 %1 · %2 MB/s")
+                        .arg(name)
+                        .arg(double(data.size()) / 1024.0 / 1024.0 / seconds, 0, 'f', 1));
+    return data;
 }
 
 void QcomFirehoseIo::writePartition(const QString& name, const QByteArray& data,
@@ -361,7 +400,14 @@ void QcomFirehoseIo::erasePartition(const QString& name, const proto::Reporter& 
 QByteArray QcomFirehoseIo::readRaw(quint64 offset, quint64 size, const proto::Reporter& reporter)
 {
     reporter.status(QStringLiteral("读取 0x%1，%2 字节").arg(offset, 0, 16).arg(size));
-    return m_session.readRaw(offset, size);
+    QElapsedTimer timer;
+    timer.start();
+    const QByteArray data = m_session.readRaw(offset, size);
+    const double seconds = qMax<qint64>(1, timer.elapsed()) / 1000.0;
+    reporter.status(QStringLiteral("读取 0x%1 · %2 MB/s")
+                        .arg(offset, 0, 16)
+                        .arg(double(data.size()) / 1024.0 / 1024.0 / seconds, 0, 'f', 1));
+    return data;
 }
 
 void QcomFirehoseIo::writeRaw(quint64 offset, const QByteArray& data,
