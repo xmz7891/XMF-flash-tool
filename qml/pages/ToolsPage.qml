@@ -2,56 +2,70 @@ import QtQuick
 import QtQuick.Controls.Basic
 import XMF
 
+// Tool library: category rail on the left, card grid on the right. This
+// replaces the old dense table so the 250+ tools stay scannable.
 Item {
     id: page
-    property string categoryFilter: ""
 
+    property string categoryFilter: ""
     property string category: categoryFilter
     property string search: ""
     property bool onlyRunnable: false
 
+    readonly property var categoryList: [{ id: "", name: "全部", icon: "grid-2x2", color: Theme.accent }].concat(App.categories)
+
+    function countFor(id) {
+        let n = 0
+        for (let i = 0; i < App.tools.length; ++i) {
+            const t = App.tools[i]
+            if (id !== "" && t.category !== id) continue
+            if (onlyRunnable && t.runnable === false) continue
+            ++n
+        }
+        return n
+    }
+
+    function categoryName(id) {
+        for (let i = 0; i < categoryList.length; ++i)
+            if (categoryList[i].id === id) return categoryList[i].name
+        return id
+    }
+    function categoryColor(id) {
+        for (let i = 0; i < categoryList.length; ++i)
+            if (categoryList[i].id === id) return categoryList[i].color
+        return Theme.accent
+    }
+
     readonly property var filtered: {
         const out = []
-        const all = App.tools
         const q = search.trim().toLowerCase()
+        const all = App.tools
         for (let i = 0; i < all.length; ++i) {
             const t = all[i]
-            if (category !== "" && t.category !== category)
-                continue
-            if (onlyRunnable && t.runnable === false)
-                continue
+            if (category !== "" && t.category !== category) continue
+            if (onlyRunnable && t.runnable === false) continue
             if (q !== "") {
                 const hay = (t.name + " " + t.desc + " " + t.keywords + " " + t.id).toLowerCase()
-                if (hay.indexOf(q) < 0)
-                    continue
+                if (hay.indexOf(q) < 0) continue
             }
             out.push(t)
         }
         return out
     }
 
-    function categoryName(id) {
-        if (id === "")
-            return "全部"
-        const cats = App.categories
-        for (let i = 0; i < cats.length; ++i)
-            if (cats[i].id === id)
-                return cats[i].name
-        return id
-    }
-
     Column {
         anchors.fill: parent
         anchors.topMargin: 4
-        spacing: 6
+        spacing: 8
 
         PageHeader {
             width: parent.width
             title: category === "" ? "工具库" : categoryName(category)
-            subtitle: filtered.length + " / " + App.tools.length + " 个工具"
+            subtitle: filtered.length + " 个工具 · 共 " + App.tools.length + " 个"
             icon: "disc-3"
+
             SearchField {
-                width: 200
+                width: 230
                 placeholder: "搜索名称、说明、格式"
                 onTextChanged: page.search = text
             }
@@ -63,91 +77,196 @@ Item {
             }
         }
 
-        // category tabs: wrap instead of clipping at compact widths
-        Flow {
-            id: tabsFlow
+        Row {
             width: parent.width
-            spacing: 2
+            height: parent.height - 60
+            spacing: 10
 
-            Repeater {
-                model: [{ id: "", name: "全部" }].concat(App.categories)
-                delegate: Item {
-                    width: tabText.implicitWidth + 22
-                    height: 26
-                    Rectangle {
-                        anchors.fill: parent
-                        color: page.category === modelData.id ? Theme.selection
-                                                              : (tabMouse.containsMouse ? Theme.panelHover : "transparent")
-                    }
-                    Rectangle {
-                        anchors.bottom: parent.bottom
-                        width: parent.width
-                        height: 2
-                        color: Theme.accent
-                        visible: page.category === modelData.id
-                        Behavior on color { ColorAnimation { duration: Theme.durFast } }
-                    }
-                    Text {
-                        id: tabText
-                        anchors.centerIn: parent
-                        text: modelData.name
-                        color: page.category === modelData.id ? Theme.accent : Theme.textSub
-                        font.pixelSize: Theme.fs(11)
-                    }
-                    MouseArea {
-                        id: tabMouse
-                        anchors.fill: parent
-                        hoverEnabled: true
-                        cursorShape: Qt.PointingHandCursor
-                        onClicked: page.category = modelData.id
+            // category rail
+            GlassSurface {
+                width: 216
+                height: parent.height
+                title: "分类"
+
+                ListView {
+                    anchors.fill: parent
+                    anchors.margins: 8
+                    clip: true
+                    spacing: 4
+                    model: page.categoryList
+                    ScrollBar.vertical: ScrollBar { policy: ScrollBar.AsNeeded }
+
+                    delegate: Rectangle {
+                        width: ListView.view.width
+                        height: 42
+                        radius: Theme.r10
+                        color: page.category === modelData.id ? Theme.alpha(page.categoryColor(modelData.id), 0.14)
+                                                              : (railMouse.containsMouse ? Theme.panelHover : "transparent")
+                        border.width: page.category === modelData.id ? 1 : 0
+                        border.color: Theme.alpha(page.categoryColor(modelData.id), 0.45)
+
+                        Row {
+                            anchors.left: parent.left
+                            anchors.leftMargin: 10
+                            anchors.verticalCenter: parent.verticalCenter
+                            spacing: 8
+                            Rectangle {
+                                width: 24; height: 24; radius: 7
+                                color: Theme.alpha(page.categoryColor(modelData.id), 0.15)
+                                IconImage {
+                                    anchors.centerIn: parent
+                                    name: modelData.icon || "folder"
+                                    size: 13
+                                    tint: page.categoryColor(modelData.id)
+                                }
+                            }
+                            Text {
+                                anchors.verticalCenter: parent.verticalCenter
+                                width: 104
+                                text: modelData.name
+                                color: page.category === modelData.id ? Theme.text : Theme.textSub
+                                font.pixelSize: Theme.fs(10)
+                                elide: Text.ElideRight
+                            }
+                            Text {
+                                anchors.verticalCenter: parent.verticalCenter
+                                text: page.countFor(modelData.id)
+                                color: page.category === modelData.id ? page.categoryColor(modelData.id) : Theme.textDim
+                                font.pixelSize: Theme.fs(9)
+                            }
+                        }
+                        MouseArea {
+                            id: railMouse
+                            anchors.fill: parent
+                            hoverEnabled: true
+                            cursorShape: Qt.PointingHandCursor
+                            onClicked: page.category = modelData.id
+                        }
                     }
                 }
             }
-        }
 
-        // table header
-        Rectangle {
-            width: parent.width
-            height: 24
-            color: Theme.panelAlt
-            border.width: 1
-            border.color: Theme.border
-            Row {
-                anchors.fill: parent
-                anchors.leftMargin: 8
-                anchors.rightMargin: 8
-                spacing: 8
-                Text { width: 22; text: "" }
-                Text { width: Math.min(220, parent.width * 0.22); text: "工具"; color: Theme.textMuted; font.pixelSize: Theme.fs(11); anchors.verticalCenter: parent.verticalCenter }
-                Text { width: parent.width - Math.min(220, parent.width * 0.22) - 250; text: "说明"; color: Theme.textMuted; font.pixelSize: Theme.fs(11); anchors.verticalCenter: parent.verticalCenter }
-                Text { width: 56; text: "状态"; color: Theme.textMuted; font.pixelSize: Theme.fs(11); anchors.verticalCenter: parent.verticalCenter }
-                Item { width: 30; height: 1 }
-                Text { text: "操作"; color: Theme.textMuted; font.pixelSize: Theme.fs(11); anchors.verticalCenter: parent.verticalCenter }
-            }
-        }
+            // tool card grid
+            Item {
+                width: parent.width - 226
+                height: parent.height
 
-        Item {
-            width: parent.width
-            height: Math.max(80, parent.height - 66 - tabsFlow.height - 24 - 18)
+                GridView {
+                    id: grid
+                    anchors.fill: parent
+                    clip: true
+                    cellWidth: Math.max(250, Math.floor(width / 3))
+                    cellHeight: 112
+                    model: page.filtered
+                    ScrollBar.vertical: ScrollBar { policy: ScrollBar.AsNeeded }
 
-            ListView {
-                id: list
-                anchors.fill: parent
-                clip: true
-                model: page.filtered
-                delegate: ToolCard {
-                    toolData: modelData
-                    onActivate: sheet.open(modelData)
+                    delegate: Item {
+                        width: grid.cellWidth - 8
+                        height: grid.cellHeight - 8
+
+                        Rectangle {
+                            anchors.fill: parent
+                            radius: Theme.r14
+                            color: toolMouse.containsMouse ? Theme.panelHover : Theme.panel
+                            border.width: 1
+                            border.color: toolMouse.containsMouse
+                                          ? Theme.alpha(page.categoryColor(modelData.category), 0.65)
+                                          : Theme.border
+
+                            Rectangle {
+                                width: 3
+                                height: parent.height - 24
+                                radius: 2
+                                anchors.left: parent.left
+                                anchors.leftMargin: 10
+                                anchors.verticalCenter: parent.verticalCenter
+                                color: page.categoryColor(modelData.category)
+                                opacity: 0.75
+                            }
+
+                            Row {
+                                anchors.fill: parent
+                                anchors.leftMargin: 20
+                                anchors.rightMargin: 12
+                                anchors.topMargin: 12
+                                anchors.bottomMargin: 12
+                                spacing: 10
+
+                                Rectangle {
+                                    width: 38; height: 38; radius: 10
+                                    color: Theme.alpha(page.categoryColor(modelData.category), 0.12)
+                                    IconImage {
+                                        anchors.centerIn: parent
+                                        name: modelData.icon || "tool"
+                                        size: 18
+                                        tint: page.categoryColor(modelData.category)
+                                    }
+                                }
+
+                                Column {
+                                    width: parent.width - 90
+                                    anchors.verticalCenter: parent.verticalCenter
+                                    spacing: 4
+
+                                    Row {
+                                        width: parent.width
+                                        spacing: 6
+                                        Text {
+                                            width: parent.width - 60
+                                            text: modelData.name || modelData.id
+                                            color: Theme.text
+                                            font.pixelSize: Theme.fs(12)
+                                            font.weight: Font.DemiBold
+                                            elide: Text.ElideRight
+                                        }
+                                        Text {
+                                            visible: (modelData.maturity || 0) > 0
+                                            text: (modelData.maturity || 0) === 2 ? "开发中" : "Beta"
+                                            color: (modelData.maturity || 0) === 2 ? Theme.textMuted : Theme.warning
+                                            font.pixelSize: Theme.fs(8)
+                                        }
+                                    }
+                                    Text {
+                                        width: parent.width
+                                        text: modelData.desc || ""
+                                        color: Theme.textMuted
+                                        font.pixelSize: Theme.fs(9)
+                                        elide: Text.ElideRight
+                                    }
+                                    Text {
+                                        text: (modelData.runnable === false ? "未接入" : "可运行")
+                                              + " · " + page.categoryName(modelData.category)
+                                        color: modelData.runnable === false ? Theme.textDim : Theme.textSub
+                                        font.pixelSize: Theme.fs(8)
+                                    }
+                                }
+
+                                Text {
+                                    anchors.verticalCenter: parent.verticalCenter
+                                    text: "›"
+                                    color: toolMouse.containsMouse ? page.categoryColor(modelData.category) : Theme.textDim
+                                    font.pixelSize: Theme.fs(20)
+                                }
+                            }
+                        }
+
+                        MouseArea {
+                            id: toolMouse
+                            anchors.fill: parent
+                            hoverEnabled: true
+                            cursorShape: Qt.PointingHandCursor
+                            onClicked: sheet.open(modelData)
+                        }
+                    }
                 }
-                ScrollBar.vertical: ScrollBar { policy: ScrollBar.AsNeeded }
-            }
 
-            EmptyState {
-                anchors.fill: parent
-                visible: page.filtered.length === 0
-                icon: "search"
-                title: "没有匹配的工具"
-                text: "调整分类或关键词；也可以在首页查看常用流程。"
+                EmptyState {
+                    anchors.fill: parent
+                    visible: page.filtered.length === 0
+                    icon: "search"
+                    title: "没有匹配的工具"
+                    text: "调整分类或关键词；也可以在首页查看常用流程。"
+                }
             }
         }
     }

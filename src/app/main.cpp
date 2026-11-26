@@ -64,6 +64,8 @@ int main(int argc, char* argv[])
                                     QStringLiteral("ms"), QStringLiteral("1200"));
     QCommandLineOption pageOpt(QStringLiteral("page"), QStringLiteral("Open a page by nav index before running"),
                                QStringLiteral("index"));
+    QCommandLineOption demoOpt(QStringLiteral("demo"),
+                                QStringLiteral("Skip first-run notice for recording"));
     QCommandLineOption toolSheetOpt(QStringLiteral("tool-sheet"),
                                     QStringLiteral("Open a tool sheet for UI regression"),
                                     QStringLiteral("id"));
@@ -119,6 +121,7 @@ int main(int argc, char* argv[])
     parser.addOption(pageOpt);
     parser.addOption(windowSizeOpt);
     parser.addOption(toolSheetOpt);
+    parser.addOption(demoOpt);
     parser.addOption(themeOpt);
     parser.addOption(modeOpt);
     parser.addOption(embedOpt);
@@ -175,7 +178,7 @@ int main(int argc, char* argv[])
                          && !parser.isSet(fastbootCmdOpt);
     if (parser.isSet(previewDisclaimerOpt))
         controller.previewDisclaimer();
-    else if (!guiMode)
+    else if (!guiMode || parser.isSet(demoOpt))
         controller.skipDisclaimerForAutomation();
     const QString instanceName = QStringLiteral("XMF-Flash-Tool-Instance");
     if (guiMode && !parser.isSet(newInstanceOpt)) {

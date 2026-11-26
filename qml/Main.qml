@@ -35,7 +35,8 @@ Window {
 
     Component.onCompleted: {
         updateUiScale()
-        if (Qt.application.arguments.indexOf("--screenshot") >= 0)
+        if (Qt.application.arguments.indexOf("--screenshot") >= 0
+                || Qt.application.arguments.indexOf("--demo") >= 0)
             noticeAccepted = true
         if (Theme.animations) {
             opacity = 0
@@ -92,8 +93,8 @@ Window {
     function pageComponent(key) {
         switch (key) {
         case "tools": return toolsComp
+        case "android": return androidComp
         case "modes": return modesComp
-        case "packets": return packetsComp
         case "firmware": return firmwareComp
         case "batch": return batchComp
         case "logs": return logsComp
@@ -114,8 +115,8 @@ Window {
         }
         switch (key) {
         case "tools": pushPage(toolsComp, {}, key); break
+        case "android": pushPage(androidComp, {}, key); break
         case "modes": pushPage(modesComp, {}, key); break
-        case "packets": pushPage(packetsComp, {}, key); break
         case "firmware": pushPage(firmwareComp, {}, key); break
         case "batch": pushPage(batchComp, {}, key); break
         case "logs": pushPage(logsComp, {}, key); break
@@ -133,7 +134,7 @@ Window {
                 Qt.callLater(console.readPartitions)
             return
         }
-        const keys = ["console", "console", "tools", "modes", "packets", "firmware",
+        const keys = ["console", "console", "tools", "android", "firmware",
                       "batch", "logs", "official", "settings", "cmd-console"]
         if (index < keys.length)
             openPageByKey(keys[index])
@@ -155,6 +156,7 @@ Window {
         case "fastboot": pushPage(fastbootModeComp, { "platform": "qcom" }, "fastboot"); break
         case "recovery": pushPage(recoveryModeComp, { "platform": "qcom" }, "recovery"); break
         case "qcom-edl": pushPage(qcomEdlComp, {}, "qcom-edl"); break
+        case "pro": pushPage(proComp, {}, "pro"); break
         case "amlogic-burn": pushPage(amlogicComp, {}, "amlogic"); break
         }
     }
@@ -199,8 +201,8 @@ Window {
     function pageLabel(key) {
         switch (key) {
         case "tools": return "工具库"
+        case "android": return "安卓工具"
         case "modes": return "内置模式"
-        case "packets": return "深度刷机引导"
         case "firmware": return "固件资源"
         case "batch": return "批量任务"
         case "logs": return "日志"
@@ -215,6 +217,7 @@ Window {
         case "fastboot": return "Fastboot 工作台"
         case "recovery": return "Recovery 工作台"
         case "qcom-edl": return "Qualcomm 9008 工作台"
+        case "pro": return "专业工作台"
         case "amlogic": return "Amlogic USB Burning 工作台"
         case "embedded": return "官方工具"
         }
@@ -345,73 +348,74 @@ Window {
                     AppButton { text: "辅助功能 ▾"; kind: 2; small: true; onDark: true; onClicked: helpMenu.popup() }
                 }
 
-                Menu {
+                AppMenu {
                     id: funcMenu
-                    MenuItem { text: "刷机台"; onTriggered: win.popToConsole() }
-                    MenuSeparator { }
-                    MenuItem { text: "工具库"; onTriggered: win.openPageByKey("tools") }
-                    MenuItem { text: "内置模式"; onTriggered: win.openPageByKey("modes") }
-                    MenuItem { text: "深度刷机引导"; onTriggered: win.openPageByKey("packets") }
-                    MenuItem { text: "固件资源"; onTriggered: win.openPageByKey("firmware") }
-                    MenuItem { text: "批量任务"; onTriggered: win.openPageByKey("batch") }
-                    MenuItem { text: "日志"; onTriggered: win.openPageByKey("logs") }
-                    MenuItem { text: "官方工具"; onTriggered: win.openPageByKey("official") }
-                    MenuItem { text: "命令控制台"; onTriggered: win.openPageByKey("cmd-console") }
-                    MenuItem { text: "设置"; onTriggered: win.openPageByKey("settings") }
+                    AppMenuItem { text: "刷机台"; onTriggered: win.popToConsole() }
+                    AppMenuSeparator { }
+                    AppMenuItem { text: "工具库"; onTriggered: win.openPageByKey("tools") }
+                    AppMenuItem { text: "安卓工具（Root / ADB / 玩机）"; onTriggered: win.openPageByKey("android") }
+                    AppMenuItem { text: "固件资源"; onTriggered: win.openPageByKey("firmware") }
+                    AppMenuItem { text: "批量任务"; onTriggered: win.openPageByKey("batch") }
+                    AppMenuItem { text: "日志"; onTriggered: win.openPageByKey("logs") }
+                    AppMenuItem { text: "官方工具"; onTriggered: win.openPageByKey("official") }
+                    AppMenuItem { text: "命令控制台"; onTriggered: win.openPageByKey("cmd-console") }
+                    AppMenuItem { text: "设置"; onTriggered: win.openPageByKey("settings") }
                 }
-                Menu {
+                AppMenu {
                     id: commonMenu
-                    MenuItem { text: "读取分区表"; onTriggered: { win.popToConsole(); Qt.callLater(console.readPartitions) } }
-                    MenuItem { text: "读取设备信息"; onTriggered: { win.popToConsole(); console.openTool("adb.info") } }
-                    MenuItem { text: "Fastboot 电池状态"; onTriggered: { win.popToConsole(); console.openTool("fastboot.battery") } }
-                    MenuSeparator { }
-                    MenuItem { text: "刷写前检查"; onTriggered: { win.popToConsole(); console.openTool("fastboot.flash.check") } }
-                    MenuItem { text: "导出分区表 CSV"; onTriggered: { win.popToConsole(); console.openTool("fastboot.partitions.export") } }
-                    MenuItem { text: "环境自检"; onTriggered: App.runTool("system.selfTest", ({})) }
+                    AppMenuItem { text: "读取分区表"; onTriggered: { win.popToConsole(); Qt.callLater(console.readPartitions) } }
+                    AppMenuItem { text: "读取设备信息"; onTriggered: { win.popToConsole(); console.openTool("adb.info") } }
+                    AppMenuItem { text: "Fastboot 电池状态"; onTriggered: { win.popToConsole(); console.openTool("fastboot.battery") } }
+                    AppMenuSeparator { }
+                    AppMenuItem { text: "刷写前检查"; onTriggered: { win.popToConsole(); console.openTool("fastboot.flash.check") } }
+                    AppMenuItem { text: "导出分区表 CSV"; onTriggered: { win.popToConsole(); console.openTool("fastboot.partitions.export") } }
+                    AppMenuItem { text: "环境自检"; onTriggered: App.runTool("system.selfTest", ({})) }
                 }
-                Menu {
+                AppMenu {
                     id: advancedMenu
-                    MenuItem { text: "Fastboot 工作台"; onTriggered: win.openFlashMode("fastboot:qcom") }
-                    MenuItem { text: "Recovery 卡刷"; onTriggered: win.openFlashMode("recovery:qcom") }
-                    MenuItem { text: "Qualcomm 9008 (EDL)"; onTriggered: win.openFlashMode("qcom-edl") }
-                    MenuSeparator { }
-                    MenuItem { text: "MTK BROM / DA（SP Flash）"; onTriggered: win.openModePage("spflash") }
-                    MenuItem { text: "Unisoc U2S / FDL"; onTriggered: win.openModePage("spdflash") }
-                    MenuItem { text: "Rockchip MaskROM / Loader"; onTriggered: win.openModePage("rkdevtool") }
-                    MenuItem { text: "Allwinner FEL"; onTriggered: win.openModePage("phoenixsuit") }
+                    AppMenuItem { text: "Fastboot 工作台"; onTriggered: win.openFlashMode("fastboot:qcom") }
+                    AppMenuItem { text: "Recovery 卡刷"; onTriggered: win.openFlashMode("recovery:qcom") }
+                    AppMenuItem { text: "Qualcomm 9008 (EDL)"; onTriggered: win.openFlashMode("qcom-edl") }
+                    AppMenuSeparator { }
+                    AppMenuItem { text: "MTK BROM / DA（SP Flash）"; onTriggered: win.openModePage("spflash") }
+                    AppMenuItem { text: "Unisoc U2S / FDL"; onTriggered: win.openModePage("spdflash") }
+                    AppMenuItem { text: "Rockchip MaskROM / Loader"; onTriggered: win.openModePage("rkdevtool") }
+                    AppMenuItem { text: "Allwinner FEL"; onTriggered: win.openModePage("phoenixsuit") }
                 }
-                Menu {
+                AppMenu {
                     id: otherMenu
-                    MenuItem { text: "ADB 命令控制台"; onTriggered: win.openPageByKey("cmd-console") }
-                    MenuItem { text: "多设备并行命令"; onTriggered: { win.popToConsole(); console.openTool("adb.multiShell") } }
-                    MenuItem { text: "Root 痕迹检测"; onTriggered: { win.popToConsole(); console.openTool("root.hide") } }
-                    MenuItem { text: "APatch 内核检查"; onTriggered: { win.popToConsole(); console.openTool("root.apatch.patch") } }
-                    MenuItem { text: "小米固件检索"; onTriggered: { win.popToConsole(); console.openTool("firmware.xiaomi.search") } }
+                    AppMenuItem { text: "ADB 命令控制台"; onTriggered: win.openPageByKey("cmd-console") }
+                    AppMenuItem { text: "多设备并行命令"; onTriggered: { win.popToConsole(); console.openTool("adb.multiShell") } }
+                    AppMenuItem { text: "Root 痕迹检测"; onTriggered: { win.popToConsole(); console.openTool("root.hide") } }
+                    AppMenuItem { text: "APatch 内核检查"; onTriggered: { win.popToConsole(); console.openTool("root.apatch.patch") } }
+                    AppMenuItem { text: "小米固件检索"; onTriggered: { win.popToConsole(); console.openTool("firmware.xiaomi.search") } }
                 }
-                Menu {
+                AppMenu {
                     id: modeMenu
-                    MenuItem { text: "自动识别当前设备"; onTriggered: { App.refreshDeviceMode(); App.notify("info", "已重新检测设备模式") } }
-                    MenuSeparator { }
-                    MenuItem { text: "Fastboot 刷写"; onTriggered: win.openFlashMode("fastboot:qcom") }
-                    MenuItem { text: "Recovery 卡刷"; onTriggered: win.openFlashMode("recovery:qcom") }
-                    MenuItem { text: "Qualcomm 9008 刷写"; onTriggered: win.openFlashMode("qcom-edl") }
-                    MenuItem { text: "MTK BROM / SP Flash"; onTriggered: win.openFlashMode("spflash") }
-                    MenuItem { text: "Unisoc U2S / FDL"; onTriggered: win.openFlashMode("spdflash") }
-                    MenuItem { text: "Rockchip MaskROM"; onTriggered: win.openFlashMode("rkdevtool") }
-                    MenuItem { text: "Allwinner FEL"; onTriggered: win.openFlashMode("phoenixsuit") }
-                    MenuItem { text: "Amlogic USB Burning"; onTriggered: win.openFlashMode("amlogic-burn") }
+                    AppMenuItem { text: "自动识别当前设备"; onTriggered: { App.refreshDeviceMode(); App.notify("info", "已重新检测设备模式") } }
+                    AppMenuSeparator { }
+                    AppMenuItem { text: "Fastboot 刷写"; onTriggered: win.openFlashMode("fastboot:qcom") }
+                    AppMenuItem { text: "Recovery 卡刷"; onTriggered: win.openFlashMode("recovery:qcom") }
+                    AppMenuItem { text: "Qualcomm 9008 刷写"; onTriggered: win.openFlashMode("qcom-edl") }
+                    AppMenuItem { text: "MTK BROM / SP Flash"; onTriggered: win.openFlashMode("spflash") }
+                    AppMenuItem { text: "Unisoc U2S / FDL"; onTriggered: win.openFlashMode("spdflash") }
+                    AppMenuItem { text: "Rockchip MaskROM"; onTriggered: win.openFlashMode("rkdevtool") }
+                    AppMenuItem { text: "Allwinner FEL"; onTriggered: win.openFlashMode("phoenixsuit") }
+                    AppMenuItem { text: "Amlogic USB Burning"; onTriggered: win.openFlashMode("amlogic-burn") }
+                    AppMenuSeparator { }
+                    AppMenuItem { text: "专业工作台（欧加 / ROM / EDL）"; onTriggered: win.openFlashMode("pro") }
                 }
 
-                Menu {
+                AppMenu {
                     id: helpMenu
-                    MenuItem { text: "打开数据目录"; onTriggered: App.openPath(App.dataPath) }
-                    MenuItem { text: "日志目录"; onTriggered: App.openPath(App.dataPath) }
-                    MenuItem { text: "一键投屏（scrcpy）"; onTriggered: App.officialTools.launch("scrcpy") }
-                    MenuItem { text: "ROM 查询 / 固件资源"; onTriggered: win.openPageByKey("firmware") }
-                    MenuItem { text: "资源下载"; onTriggered: win.openPageByKey("firmware") }
-                    MenuItem { text: "使用指南"; onTriggered: App.openDocs("USER_GUIDE.md") }
-                    MenuItem { text: "检查更新"; onTriggered: App.openUrl("https://github.com/xmz7891/XMF-flash-tool/releases/latest") }
-                    MenuItem { text: "扫描引导包"; onTriggered: App.packets.refresh() }
+                    AppMenuItem { text: "打开数据目录"; onTriggered: App.openPath(App.dataPath) }
+                    AppMenuItem { text: "日志目录"; onTriggered: App.openPath(App.dataPath) }
+                    AppMenuItem { text: "一键投屏（scrcpy）"; onTriggered: App.officialTools.launch("scrcpy") }
+                    AppMenuItem { text: "ROM 查询 / 固件资源"; onTriggered: win.openPageByKey("firmware") }
+                    AppMenuItem { text: "资源下载"; onTriggered: win.openPageByKey("firmware") }
+                    AppMenuItem { text: "使用指南"; onTriggered: App.openDocs("USER_GUIDE.md") }
+                    AppMenuItem { text: "检查更新"; onTriggered: App.openUrl("https://github.com/xmz7891/XMF-flash-tool/releases/latest") }
+                    AppMenuItem { text: "扫描引导包"; onTriggered: App.packets.refresh() }
                 }
 
                 Row {
@@ -481,8 +485,7 @@ Window {
                         readonly property var items: [
                             { key: "console", icon: "zap", label: "刷机台" },
                             { key: "tools", icon: "disc-3", label: "工具库" },
-                            { key: "modes", icon: "layout-dashboard", label: "模式" },
-                            { key: "packets", icon: "package", label: "引导" },
+                            { key: "android", icon: "smartphone", label: "安卓" },
                             { key: "firmware", icon: "download-cloud", label: "固件" },
                             { key: "batch", icon: "list-checks", label: "批量" },
                             { key: "logs", icon: "file-text", label: "日志" },
@@ -949,9 +952,9 @@ Window {
     // keyboard navigation for the icon rail
     Shortcut { sequence: "Ctrl+1"; onActivated: win.popToConsole() }
     Shortcut { sequence: "Ctrl+2"; onActivated: win.openPageByKey("tools") }
-    Shortcut { sequence: "Ctrl+3"; onActivated: win.openPageByKey("modes") }
-    Shortcut { sequence: "Ctrl+4"; onActivated: win.openPageByKey("packets") }
-    Shortcut { sequence: "Ctrl+5"; onActivated: win.openPageByKey("firmware") }
+    Shortcut { sequence: "Ctrl+3"; onActivated: win.openPageByKey("android") }
+    Shortcut { sequence: "Ctrl+4"; onActivated: win.openPageByKey("firmware") }
+    Shortcut { sequence: "Ctrl+5"; onActivated: win.openPageByKey("batch") }
     Shortcut { sequence: "Ctrl+6"; onActivated: win.openPageByKey("batch") }
     Shortcut { sequence: "Ctrl+7"; onActivated: win.openPageByKey("logs") }
     Shortcut { sequence: "Ctrl+8"; onActivated: win.openPageByKey("official") }
@@ -960,6 +963,7 @@ Window {
     // --------------------------------------------------------- components
     Component { id: pageHostComp; PageHost {} }
     Component { id: toolsComp; ToolsPage { categoryFilter: "" } }
+    Component { id: androidComp; AndroidToolsPage {} }
     Component { id: modesComp; ModesPage { onOpenMode: function(modeId) { win.openModePage(modeId) } } }
     Component { id: packetsComp; PacketsPage {} }
     Component { id: firmwareComp; FirmwarePage {} }
@@ -980,6 +984,7 @@ Window {
         onOpenPage: function(key) { win.openPageByKey(key) }
     } }
     Component { id: amlogicComp; AmlogicBurnModePage { onBackRequested: win.popToConsole() } }
+    Component { id: proComp; ProWorkbenchPage { onBackRequested: win.popToConsole() } }
     Component { id: embeddedComp; EmbeddedToolPage { onBackRequested: win.popToConsole() } }
 
     Rectangle {

@@ -6,6 +6,7 @@ set(APP_SOURCES
     FreeNotice.cpp FreeNoticePrivate.cpp
     SystemTools.cpp
     ToolchainManager.cpp ToolchainManager.h
+    ProTools.cpp ProTools.h
 )
 
 qt_add_executable(XMF ${APP_SOURCES})

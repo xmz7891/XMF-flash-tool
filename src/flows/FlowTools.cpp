@@ -19,6 +19,7 @@
 #include "usb/ToolOptions.h"
 #include "usb/UsbTransport.h"
 
+#include <QDir>
 #include <QFileInfo>
 #include <QRegularExpression>
 #include <QStringList>
@@ -562,6 +563,84 @@ void qcomSlot(TaskContext& ctx, const QVariantMap& options)
         auto handle = openQcom(options, reporter);
         handle.session->setActiveSlot(slot);
         ctx.ok(QStringLiteral("已请求切换到启动槽 _%1").arg(slot));
+    });
+}
+
+// ---------------------------------------------------------------------------
+// Qualcomm maintenance presets
+// ---------------------------------------------------------------------------
+
+void qcomMaintBackup(TaskContext& ctx, const QVariantMap& options)
+{
+    proto::runGuarded(ctx, [&] {
+        const auto reporter = proto::reporterFor(ctx);
+        QString dir = proto::optionString(options, QStringLiteral("output_dir"));
+        if (dir.isEmpty())
+            throw std::runtime_error("请选择备份目录");
+        auto handle = openQcom(options, reporter);
+        const auto& table = handle.session->partitionTable();
+        QStringList preset = listOption(options, QStringLiteral("partitions"));
+        if (preset.isEmpty())
+            preset = {QStringLiteral("modem"), QStringLiteral("modemst1"), QStringLiteral("modemst2"),
+                      QStringLiteral("fsg"), QStringLiteral("fsc"), QStringLiteral("persist"),
+                      QStringLiteral("persistbak")};
+        util::ensureDir(dir);
+        int done = 0;
+        for (const QString& name : preset) {
+            const PartitionInfo* p = table.find(name);
+            if (!p) { ctx.warn(QStringLiteral("跳过不存在分区：%1").arg(name)); continue; }
+            const QByteArray data = handle.session->readPartition(p->name);
+            const QString out = QDir(dir).filePath(backupFileName(QStringLiteral("qcom"), p->name));
+            if (!util::writeFile(out, data))
+                throw std::runtime_error(QStringLiteral("写入失败：%1").arg(out).toStdString());
+            ctx.ok(QStringLiteral("已备份 %1（%2 字节）").arg(p->name).arg(data.size()));
+            ctx.setProgress(int(100.0 * (++done) / preset.size()));
+        }
+        ctx.ok(QStringLiteral("EDL 维护备份完成：%1 个分区").arg(done));
+    });
+}
+
+void qcomMaintGptWrite(TaskContext& ctx, const QVariantMap& options)
+{
+    proto::runGuarded(ctx, [&] {
+        if (!proto::optionBool(options, QStringLiteral("confirm")))
+            throw std::runtime_error("危险操作：请勾选“我确认写入 GPT”");
+        const QString path = proto::optionString(options, QStringLiteral("gpt"));
+        if (path.isEmpty())
+            throw std::runtime_error("请选择完整 GPT 镜像（含保护 MBR）");
+        const QByteArray data = util::readFile(path);
+        if (data.size() < 1024)
+            throw std::runtime_error("GPT 镜像过小");
+        const auto reporter = proto::reporterFor(ctx);
+        auto handle = openQcom(options, reporter);
+        handle.session->writeRaw(0, data);
+        ctx.ok(QStringLiteral("GPT 已写入 0 偏移（%1 字节）；建议立即重新读取分区表核对")
+                   .arg(data.size()));
+    });
+}
+
+void qcomMaintFormatLun(TaskContext& ctx, const QVariantMap& options)
+{
+    proto::runGuarded(ctx, [&] {
+        if (!proto::optionBool(options, QStringLiteral("confirm")))
+            throw std::runtime_error("危险操作：请勾选“我确认格式化”");
+        const auto reporter = proto::reporterFor(ctx);
+        auto handle = openQcom(options, reporter);
+        const auto& table = handle.session->partitionTable();
+        const QStringList protect = {QStringLiteral("xbl"), QStringLiteral("xbl_config"),
+                                     QStringLiteral("abl"), QStringLiteral("tz"), QStringLiteral("hyp"),
+                                     QStringLiteral("devcfg"), QStringLiteral("devinfo"),
+                                     QStringLiteral("persist"), QStringLiteral("modem"),
+                                     QStringLiteral("modemst1"), QStringLiteral("modemst2")};
+        int done = 0;
+        for (const auto& p : table.partitions) {
+            if (protect.contains(p.name)) continue;
+            if (p.name.startsWith(QStringLiteral("xbl")) || p.name.startsWith(QStringLiteral("abl")))
+                continue;
+            handle.session->erasePartition(p.name);
+            ++done;
+        }
+        ctx.ok(QStringLiteral("已按 GPT 擦除 %1 个非保护分区（LUN0）").arg(done));
     });
 }
 
@@ -1334,6 +1413,39 @@ void registerQcomFlowTools()
                        fields::choice(QStringLiteral("slot"), QStringLiteral("启动槽"),
                                       {QStringLiteral("a"), QStringLiteral("b")}, 0)};
         addTool(spec, qcomSlot);
+    }
+    {
+        auto spec = baseSpec(QStringLiteral("qcom.maint.backup"),
+                             QStringLiteral("qcom"), QStringLiteral("EDL 维护备份"),
+                             QStringLiteral("一键备份基带 / 指纹 / persist 等关键分区"),
+                             QStringLiteral("shield"), 230);
+        spec.fields = {deviceField(), packetField(), modelField(), programmerField(), memoryField(),
+                       fields::text(QStringLiteral("partitions"), QStringLiteral("分区列表（逗号分隔）"),
+                                    QStringLiteral("modem,modemst1,modemst2,fsg,fsc,persist,persistbak"),
+                                    QString(), QStringLiteral("留空使用默认基带/指纹预设"), false),
+                       dirField(QStringLiteral("output_dir"), QStringLiteral("备份目录"))};
+        addTool(spec, qcomMaintBackup);
+    }
+    {
+        auto spec = baseSpec(QStringLiteral("qcom.maint.gpt.write"),
+                             QStringLiteral("qcom"), QStringLiteral("EDL 写入 GPT"),
+                             QStringLiteral("把完整 GPT 镜像写回 0 偏移（含保护 MBR，需确认）"),
+                             QStringLiteral("hard-drive"), 231);
+        spec.badge = QStringLiteral("危险");
+        spec.fields = {deviceField(), packetField(), modelField(), programmerField(), memoryField(),
+                       pathField(QStringLiteral("gpt"), QStringLiteral("GPT 镜像"), QStringLiteral("*.img *.bin")),
+                       confirmField(QStringLiteral("我确认写入 GPT"))};
+        addTool(spec, qcomMaintGptWrite);
+    }
+    {
+        auto spec = baseSpec(QStringLiteral("qcom.maint.format.lun"),
+                             QStringLiteral("qcom"), QStringLiteral("EDL 格式化 LUN"),
+                             QStringLiteral("按 GPT 擦除 LUN0 非保护分区（需确认）"),
+                             QStringLiteral("eraser"), 232);
+        spec.badge = QStringLiteral("危险");
+        spec.fields = {deviceField(), packetField(), modelField(), programmerField(), memoryField(),
+                       confirmField(QStringLiteral("我确认格式化 LUN0"))};
+        addTool(spec, qcomMaintFormatLun);
     }
     {
         auto spec = baseSpec(QStringLiteral("qcom.flow.checksum"),

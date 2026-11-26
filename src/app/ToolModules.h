@@ -23,5 +23,6 @@ void registerUnlockTools();
 void registerFirmwareTools();
 void registerBatchTools();
 void registerBypassTools();
+void registerProTools();
 
 } // namespace gf

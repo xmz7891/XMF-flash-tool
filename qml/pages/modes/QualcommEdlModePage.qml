@@ -17,6 +17,9 @@ Item {
     property bool lunCollapsed: false
     property string tableMode: "device"
     property int pendingRow: -1
+    property string guideStorage: "AUTO"
+    property string guideAuth: "NONE"
+    property string guideModel: ""
 
     readonly property var edlPorts: {
         let out = []
@@ -33,6 +36,7 @@ Item {
 
     function openTool(toolId, extra) {
         const preset = { programmer: App.guideFile }
+        if (page.guideStorage !== "AUTO") preset.memory = page.guideStorage.toLowerCase()
         if (extra) for (const k in extra) preset[k] = extra[k]
         toolSheet.open(App.toolInfo(toolId), preset)
     }
@@ -52,7 +56,8 @@ Item {
         if (App.guideFile.length === 0) { App.notify("warning", "请先选择 Loader"); loaderDialog.open(); return }
         reading = true
         frame.statusText = "正在读取 GPT…"; frame.statusKind = "busy"
-        const result = App.workspace.loadQcomPartitions(App.guideFile, "")
+        const memory = page.guideStorage === "AUTO" ? "" : page.guideStorage.toLowerCase()
+        const result = App.workspace.loadQcomPartitions(App.guideFile, memory)
         reading = false
         if (!result || !result.ok) {
             logBox.append("error", result && result.error ? result.error : "读取 GPT 失败")
@@ -114,7 +119,9 @@ Item {
         const rows = page.partitions.filter(function(r) { return r.checked && String(r.file || "").length > 0 })
         if (rows.length === 0) { App.notify("warning", "请先勾选带镜像文件的分区"); return }
         for (const row of rows)
-            App.runTool("qcom.flow.write", { programmer: App.guideFile, memory: "emmc", partition: row.name, input: row.file, confirm: true })
+            App.runTool("qcom.flow.write", { programmer: App.guideFile,
+                                             memory: page.guideStorage === "AUTO" ? "" : page.guideStorage.toLowerCase(),
+                                             partition: row.name, input: row.file, confirm: true })
         logBox.append("info", "已提交 " + rows.length + " 个写入任务")
     }
 
@@ -137,11 +144,12 @@ Item {
         deviceCode: page.edlPorts.length > 0 ? String(page.edlPorts[0].vidPid || page.edlPorts[0].portName || "9008") : "—"
         bootloaderText: "9008 / EDL"; slotText: "—"
         onBackRequested: page.backRequested()
-        onBrowseRequested: loaderDialog.open()
+        onBrowseRequested: loaderPicker.open()
         onLoadRequested: page.readTable()
         onReloadRequested: { App.scanPorts(); App.refreshDevices() }
         headerActions: [
             AppButton { text: "刷新端口"; icon: "refresh-cw"; kind: 1; small: true; onClicked: { App.scanPorts(); App.refreshDevices() } },
+            AppButton { text: "引导库"; icon: "package"; kind: 1; small: true; onClicked: loaderPicker.open() },
             AppButton { text: "加载 XML"; kind: 2; small: true; onClicked: xmlDialog.open() },
             AppButton { text: "选择镜像目录"; icon: "folder-open"; kind: 1; small: true; onClicked: imageDirDialog.open() },
             AppButton { text: "刷入选中文件"; icon: "upload"; kind: 0; small: true; enabled: page.partitions.length > 0; onClicked: page.flashWithFiles() },
@@ -282,5 +290,18 @@ Item {
             frame.fwLoaded = true
         }
     }
+    LoaderPicker {
+        id: loaderPicker
+        onLoaderChosen: function(path, storage, auth, model) {
+            App.guideFile = path
+            frame.fwPath = path
+            frame.fwLoaded = true
+            page.guideStorage = storage
+            page.guideAuth = auth
+            page.guideModel = model
+            App.notify("success", "已选择 " + model + " · " + storage + " · " + auth)
+        }
+    }
+
     ToolSheet { id: toolSheet; anchors.fill: parent }
 }

@@ -118,6 +118,7 @@ void AppController::initialize()
     registerFirmwareTools();
     registerBatchTools();
     registerBypassTools();
+    registerProTools();
 
     GF_INFO(QStringLiteral("app"), QStringLiteral("XMF Flash Tool %1 started (admin=%2)")
                                         .arg(version(), isAdmin() ? QStringLiteral("yes") : QStringLiteral("no")));
